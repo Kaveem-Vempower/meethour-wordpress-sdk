@@ -1,5 +1,5 @@
 <?php
-function meethour_fetch_recordings() {
+function meethour_fetch_contacts() {
     $access_token = get_option('meethour_access_token', '');
     
     if (empty($access_token)) {
@@ -28,7 +28,7 @@ function meethour_fetch_recordings() {
 }
 
 function meethour_recordings_page(){
-    $recording = meethour_fetch_recordings();
+    $recording = meethour_fetch_contacts();
     ?>
     <div class="wrap">
         <h1>MeetHour Recordings List</h1>

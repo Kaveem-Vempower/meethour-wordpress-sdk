@@ -1,26 +1,30 @@
 <?php
+function wordpress_fetch_users(){
+    $members = get_users(
+        array(
 
-$members = get_users(
-    array(
-        'orderby' => 'ID',
-        'order'   => 'ASC'
-    )
-);
-$members = array_map(function($member) {
-    $member->usermeta = array_map(function($data) {
-        return reset($data);
-    }, get_user_meta($member->ID));
-    return $member;
-}, $members);
+            'orderby' => 'ID',
+            'order'   => 'ASC'
+        )
+    );
+    $members = array_map(function($member) {
+        $member->usermeta = array_map(function($data) {
+            return reset($data);
+        }, get_user_meta($member->ID));
+        return $member;
+    }, $members);
+    
+    $user_data = array_map(function($member) {
+        return $member->data;
+    }, $members);
+    return $user_data;
+}
 
-$user_data = array_map(function($member) {
-    return $member->data;
-}, $members);
+// foreach ($user_data as $user) {
+//     echo $user->user_email . "\n";
+// }
 
-echo json_encode($user_data['user_email']);
-
-
-function meethour_fetch_recordings() {
+function meethour_fetch_users() {
     $access_token = get_option('meethour_access_token', '');
     
     if (empty($access_token)) {
@@ -84,7 +88,9 @@ function meethour_contact_delete($contact_id){
 }
 
 function meethour_guests_page() {
-    $wordpress_users = meethour_fetch_recordings();
+    $wordpress_users = wordpress_fetch_users();
+    $user_data = meethour_fetch_users();
+    print_r($wordpress_users);
 ?>
 <div class="wrap">
     <h1>MeetHour Contacts List</h1>
@@ -107,7 +113,7 @@ function meethour_guests_page() {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($wordpress_users as $user): ?>
+                    <?php foreach ($user_data as $user): ?>
                         <tr>
                             <td><?php echo esc_html($user['user_id']); ?></td>
                             <td><?php echo esc_html($user['first_name']." ".$user['last_name']); ?></td>
@@ -129,6 +135,30 @@ function meethour_guests_page() {
                                     Delete
                                 </button>                            
                             </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php foreach ($wordpress_users as $user): ?>
+                        <tr>
+                            <td><?php echo $user->ID; ?></td>
+                            <td><?php echo $user->user_login; ?></td>
+                            <td><?php echo $user->user_email; ?></td>
+                            <td><?php   ?></td>
+                            <td><?php 
+                                    $date = new DateTime($user->user_registered);
+                                    echo esc_html($date->format('d-m-Y'));
+                                ?>
+                            </td>
+                            <!-- <td>
+                                <a href="https://portal.meethour.io/customer/editContact/<?php echo $user->ID; ?>"><button class="copy-shortcode">Edit</button></a>
+                                <button 
+                                    type="button" 
+                                    data-user-id="<?php echo $user->ID; ?>"
+                                    onclick="if(confirm('Are you sure you want to delete this user?')) meethour_contact_delete(this.dataset.userId)" 
+                                    class="meethour-delete-btn"
+                                    aria-label="Delete user">
+                                    Delete
+                                </button>                            
+                            </td> -->
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

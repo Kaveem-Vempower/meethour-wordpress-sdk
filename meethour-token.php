@@ -46,6 +46,7 @@ function meethour_token_page() {
                 add_settings_error('meethour_messages', 'meethour_error', 
                     'Failed to generate access token. Please check your credentials.', 'error');
             }
+           
         }
     }
 
@@ -82,6 +83,30 @@ function meethour_token_page() {
                     <input type="submit" name="meethour_generate_token" class="button button-primary" 
                         value="Generate Access Token">
                 </p>
+                <?php $access_token = get_option('meethour_access_token', ''); ?>
+                <?php if (!empty($access_token)): ?>
+                <div style="word-wrap:break-word;" class="notice notice-success">
+                    <p><strong>Access Token:</strong> <?php echo esc_html($access_token); ?></p>
+                    <button style="margin-bottom: 10px;" class="button button-small copy-shortcode" 
+                    data-shortcode='<?php echo esc_attr($access_token); ?>'>
+                    Copy Access Token
+                    </button><br/>
+                </div>
+                <script>
+            jQuery(document).ready(function($) {
+                $('.copy-shortcode').click(function() {
+                    var shortcode = $(this).data('shortcode');
+                    navigator.clipboard.writeText(shortcode).then(function() {
+                        var button = $(this);
+                        button.text('Copied!');
+                        setTimeout(function() {
+                            button.text('Copy Access Token');
+                        }, 2000);
+                    }.bind(this));
+                });
+            });
+            </script>
+                <?php endif; ?>
             </form>
         </div>
     </div>

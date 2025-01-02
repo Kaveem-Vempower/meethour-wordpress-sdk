@@ -1,12 +1,11 @@
 <?php 
-    include ("meethour-recording.php");
-    include ("meethour-meeting.php");
-    include ("meethour-token.php");
-    include ("meethour-guests.php");
-    include ("meethour-scheduler.php");
-    include ("meethour-instant.php");
- ?>
-<?php
+include ("meethour-recording.php");
+include ("meethour-meeting.php");
+include ("meethour-token.php");
+include ("meethour-guests.php");
+include ("meethour-scheduler.php");
+include ("meethour-instant.php");
+
 /*
  * Plugin Name: MeetHour Integration
  * Description: Integrates MeetHour meeting scheduler with WordPress
@@ -43,11 +42,11 @@ function meethour_admin_menu() {
 
     add_submenu_page(
         'meethour-settings',         // Parent slug
-        'Instant Meeting',          // Page title
-        'Instant Meeting',          // Menu title
+        'Instant Meeting',           // Page title
+        'Instant Meeting',           // Menu title
         'manage_options',            // Required capability
-        'meethour-instant',        // Menu slug
-        'meethour_instant_page'    // Function to display the page
+        'meethour-instant',          // Menu slug
+        'meethour_instant_page'      // Function to display the page
     );
 
     add_submenu_page(
@@ -59,7 +58,6 @@ function meethour_admin_menu() {
         'meethour_scheduler_page'    // Function to display the page
     );
 
-    // Add new Meetings List submenu
     add_submenu_page(
         'meethour-settings',         // Parent slug
         'Meetings List',             // Page title
@@ -70,27 +68,23 @@ function meethour_admin_menu() {
     );
 
     add_submenu_page(
-        'meethour-settings', // Parent slug
-        'Guests', // Page title
-        'Guests', // Menu title
-        'manage_options', // Capability
-        'meethour-guests', // Menu slug
-        'meethour_guests_page' // Callback function
+        'meethour-settings',         // Parent slug
+        'Guests',                    // Page title
+        'Guests',                    // Menu title
+        'manage_options',            // Required capability
+        'meethour-guests',           // Menu slug
+        'meethour_guests_page'       // Function to display the page
     );
 
     add_submenu_page(
-        'meethour-settings', // Parent slug
-        'Recordings', // Page title
-        'Recordings', // Menu title
-        'manage_options', // Capability
-        'meethour-recordings', // Menu slug
-        'meethour_recordings_page' // Callback function
+        'meethour-settings',         // Parent slug
+        'Recordings',                // Page title
+        'Recordings',                // Menu title
+        'manage_options',            // Required capability
+        'meethour-recordings',       // Menu slug
+        'meethour_recordings_page'   // Callback function
     );
 }
 add_action('admin_menu', 'meethour_admin_menu');
 
-// Register plugin settings
-function meethour_register_settings() {
-    register_setting('meethour_settings', 'meethour_access_token');
-}
-add_action('admin_init', 'meethour_register_settings');
+?>

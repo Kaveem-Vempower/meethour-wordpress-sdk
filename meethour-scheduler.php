@@ -127,6 +127,29 @@ if (is_wp_error($response)) {
                                 </select>
                             </td>
                         </tr>
+                        <tr>
+                            <th>General Options </th>
+                            <td>
+                                <input type="checkbox" name="options[]" value="ALLOW_GUEST" id="vertical-checkbox-guest-user" checked="">
+                                <label class="cursor-pointer select-none" for="vertical-checkbox-guest-user">Guest user can join meeting</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="options[]" value="JOIN_ANYTIME" id="vertical-checkbox-allow-anytime" checked="" onclick="if(($(this).is(':checked'))) { $('#allow_join_before_sec').hide(); } else {$('#allow_join_before_sec').show();} ">
+                                <label class="cursor-pointer select-none" for="vertical-checkbox-allow-anytime">Allow participants to join anytime</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="options[]" value="ENABLE_LOBBY" id="vertical-checkbox-enable-lobby" checked="">
+                                <label class="cursor-pointer select-none" for="vertical-checkbox-enable-lobby">Enable Lobby</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="options[]" value="LIVEPAD" id="vertical-checkbox-live-pad" checked="">
+                                <label class="cursor-pointer select-none" for="vertical-checkbox-live-pad">LivePad</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="options[]" value="WHITE_BOARD" id="vertical-checkbox-WhiteBoard" checked="">
+                                <label class="cursor-pointer select-none" for="vertical-checkbox-WhiteBoard">WhiteBoard</label>
+                            </td>
+                        </tr>
                     </table>
 
                     <p class="submit">

@@ -1,0 +1,5 @@
+{
+    "require": {
+        "meethour/php-sdk": "^1.0"
+    }
+}

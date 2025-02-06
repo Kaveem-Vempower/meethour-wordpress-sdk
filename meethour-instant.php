@@ -1,6 +1,14 @@
 <?php
+require(WP_PLUGIN_DIR . '/meethour/vendor/autoload.php');
+require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
+
+
+use MeetHourApp\Services\MHApiService;
+use MeetHourApp\Types\ScheduleMeeting;
 function meethour_Instant_page() {
     // Get access token
+    $meetHourApiService = new MHApiService();
+
     $access_token = get_option('meethour_access_token', '');
 
     // Handle instant meeting request
@@ -14,43 +22,22 @@ function meethour_Instant_page() {
             add_settings_error('meethour_messages', 'meethour_error', 
                 'Access token not found. Please generate an access token first.', 'error');
         } else {
-            // Prepare default meeting data for API
-            $data = [
-                'meeting_name' => 'Instant Meeting',
-                'agenda' => 'This is an instant meeting.',
-                'passcode' => 'passcode',
-                'meeting_date' => date('d-m-Y'),
-                'meeting_time' => date('h:i'),
-                'meeting_meridiem' => date('A'),
-                'duration_hr' => 1,
-                'duration_min' => 0,
-                'timezone' => 'Asia/Kolkata',
-                'is_recurring' => 0,
-                'options' => ['ALLOW_GUEST', 'JOIN_ANYTIME']
-            ];
-
-            // Make API request to schedule instant meeting
-            $response = wp_remote_post('https://api.meethour.io/api/v1.2/meeting/schedulemeeting', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $access_token,
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'body' => json_encode($data),
-                'timeout' => 30
-            ]);
-
-            // Handle the API response
-            if (is_wp_error($response)) {
-                add_settings_error('meethour_messages', 'meethour_error', 
-                    'Error: ' . $response->get_error_message(), 'error');
-            } else {
-                $result = json_decode(wp_remote_retrieve_body($response), true);
-                $message = isset($result['data']['meeting_id']) ? $result['message'] : 'No message available';
-                $meeting_link = isset($result['data']['joinURL']) ? $result['data']['joinURL'] : 'No link available';
-                add_settings_error('meethour_messages', 'meethour_success', 
-                    esc_html($message) . ' Meeting Link: ' . esc_html($meeting_link), 'success');
-            }
+    
+            $meeting_name = sanitize_text_field($_POST['meeting_name'] ?? '');
+            $passcode = sanitize_text_field($_POST['meeting_passcode'] ?? '');
+            $meeting_time = date("h:i");
+            $meeting_meridiem = date("a");
+            $meeting_date = date("m-d-Y");
+            $timezone = 'Asia/Kolkata';
+            $body = new ScheduleMeeting($meeting_name, $passcode, $meeting_time, $meeting_meridiem, $meeting_date, $timezone);
+            $response = $meetHourApiService->scheduleMeeting($access_token, $body);
+            
+            $data = $response->data; 
+            $message = isset($data->meeting_id) ? $response->message : 'No message available';
+            $meeting_link = isset($data->meeting_id) ? $data->joinURL : 'No link available';
+            print_r($message);
+            add_settings_error('meethour_messages', 'meethour_success', 
+                esc_html($message) . ' Meeting Link: ' . esc_html($meeting_link), 'success');
         }
     }
 
@@ -66,8 +53,19 @@ function meethour_Instant_page() {
             </div>
         <?php else: ?>
             <div class="card">
+
                 <form method="POST">
                     <?php wp_nonce_field('meethour_instant_meeting', 'meethour_instant_nonce'); ?>
+                    <table class="form-table">
+                    <tr>
+                        <th><label for="meeting_name">Meeting Name</label></th>
+                        <td><input type="text" id="meeting_name" name="meeting_name" class="regular-text" required></td>
+                    </tr>
+                    <tr>
+                        <th><label for="meeting_name">Meeting Passcode</label></th>
+                        <td><input type="password" id="meeting_passcode" name="meeting_passcode" class="regular-text" required></td>
+                    </tr>
+                    </table>
                     <p class="submit">
                         <input type="submit" name="meethour_instant_submit" class="button button-primary" value="Create Instant Meeting">
                     </p>

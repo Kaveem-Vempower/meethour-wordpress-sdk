@@ -21,10 +21,16 @@ while (have_posts()) : the_post();
     $query = $parsed_url['query'];
     parse_str($query, $params);
     $pcode = $params['pcode'];
+
+    $current_user = get_the_ID();
     $body = new GenerateJwt($meeting_id);
-    $body->$contact_id = $contact_id;
+    if ($current_user == get_option('meethour_main_user', '')) {
+        $body->$contact_id = $contact_id;
+    }
     $response = $meetHourApiService->generateJwt($token, $body);
-    $jwt_token = $response->jwt;
+    if ($response->success == true) {
+        $jwt_token = $response->jwt;
+    }
     if (!empty($meeting_id)) {
 ?>
         <!DOCTYPE html>

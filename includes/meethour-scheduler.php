@@ -4,6 +4,7 @@ require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
 
 use MeetHourApp\Services\MHApiService;
 use MeetHourApp\Types\ScheduleMeeting;
+use MeetHourApp\Types\EditMeeting;
 
 function fetch_timeZone()
 {
@@ -59,14 +60,14 @@ function meethour_render_meeting_details_meta_box($post)
         </tr>
         <tr>
             <th><label for="duration_hr">Duration (H:MM)</label></th>
-            <td><input type="number" id="duration_hr" name="duration_hr" value="1" min="0" max="24" class="small-text">
-                <input type="number" id="duration_min" name="duration_min" value="30" min="0" max="59" class="small-text">
+            <td><input type="number" id="duration_hr" name="duration_hr" value="<?php echo get_post_meta($post_id, 'duration_hr', true) ?>" min="0" max="24" class="small-text">
+                <input type="number" id="duration_min" name="duration_min" value="<?php echo get_post_meta($post_id, 'duration_min', true) ?>" min="0" min="0" max="59" class="small-text">
             </td>
         </tr>
         <tr>
             <th><label for="timezone">Timezone</label></th>
             <td>
-                <select style="width: 90%;" id="timezone" name="timezone">
+                <select style="width: 90%;" value="<?php echo get_post_meta($post_id, 'timezone', true) ?>" id="timezone" name="timezone">
                     <?php foreach ($timeZones as $timezone) {
                     ?>
                         <option value="<?php echo $timezone->value ?>"><?php echo $timezone->name ?></option>
@@ -98,12 +99,13 @@ function meethour_render_meeting_details_meta_box($post)
         <tr>
             <th><label>Instructions</label></th>
             <td>
-                <textarea style="width: 90%;" name="comment" placeholder="Type your Instructions" minlength="10" rows="4"></textarea>
+                <textarea style="width: 90%;" name="comment" placeholder="Type your Instructions" minlength="10" value="<?php echo get_post_meta($post_id, 'instructions', true) ?>" id="instructions" rows="4"></textarea>
             </td>
         </tr>
     </table>
     <table style="display: flex;" class="form-table">
         <tr>
+            <p id="api-options" style="display: none;"><?php echo get_post_meta($post_id, 'options', true) ?></p>
             <th><label for="recurring_meetings">Recurring Meeting</label></th>
             <td>
                 <input id="id_AUTO_START_LIVESTREAMING" type="checkbox" name="options[]" value="AUTO_START_LIVESTREAMING" onclick="checklivestreamsettings();">
@@ -259,6 +261,30 @@ function meethour_render_meeting_details_meta_box($post)
             }
             return opts;
         }
+        // Function to fetch options and update checkboxes
+        function fetchAndUpdateCheckboxes() {
+            APIoptions = document.getElementById('api-options');
+            var optionsString = APIoptions.innerText;
+            var options = JSON.parse(optionsString);
+            console.log(options)
+            updateCheckboxes(options);
+
+        }
+
+        function updateCheckboxes(options) {
+            var checkboxes = document.querySelectorAll('input[name="options[]"]');
+            checkboxes.forEach(function(checkbox) {
+                var optionName = checkbox.value;
+                if (options.hasOwnProperty(optionName)) {
+                    checkbox.checked = options[optionName] === 1;
+                } else {
+                    checkbox.checked = false;
+                }
+            });
+        }
+
+        // Call the function when needed
+        fetchAndUpdateCheckboxes();
     </script>
 <?php
 }
@@ -266,16 +292,23 @@ function meethour_render_meeting_details_meta_box($post)
 add_action('save_post_mh_meetings', 'meethour_save_meeting_details');
 function meethour_save_meeting_details($post_id)
 {
+    $post_meeting_id = get_post_meta($post_id, 'meeting_id', true);
+    $existing_posts = get_posts([
+        'post_type'   => 'mh_meetings',
+        'meta_key'    => 'meeting_id',
+        'meta_value'  => $post_meeting_id,
+        'numberposts' => 1,
+    ]);
+
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
     if (isset($_POST['meethour_meeting_details_nonce']) && wp_verify_nonce($_POST['meethour_meeting_details_nonce'], 'meethour_save_meeting_details')) {
         update_post_meta($post_id, 'meeting_name', sanitize_text_field($_POST['meeting_name']));
         update_post_meta($post_id, 'meeting_description', sanitize_text_field($_POST['meeting_description']));
         update_post_meta($post_id, 'meeting_passcode', sanitize_text_field($_POST['meeting_passcode']));
-        $start_time = sanitize_text_field($_POST['meeting_date']) . ' ' . sanitize_text_field($_POST['meeting_time']);
-        update_post_meta($post_id, 'start_time', $start_time);
-        $duration = sanitize_text_field($_POST['duration_hr']) . sanitize_text_field($_POST['duration_hr']);
-        update_post_meta($post_id, 'duration', $duration);
+        update_post_meta($post_id, 'meeting_date', sanitize_text_field($_POST['meeting_date']));
+        update_post_meta($post_id, 'meeting_time', sanitize_text_field($_POST['meeting_time']));
+        update_post_meta($post_id, 'duration_hr', sanitize_text_field($_POST['duration_hr']));
         update_post_meta($post_id, 'duration_min', sanitize_text_field($_POST['duration_min']));
         update_post_meta($post_id, 'timezone', sanitize_text_field($_POST['timezone']));
         update_post_meta($post_id, 'recording_storage', sanitize_text_field($_POST['recording_storage']));
@@ -287,7 +320,7 @@ function meethour_save_meeting_details($post_id)
             }, $_POST['attendes']);
             $jsonAttendes = json_encode($attendes);
         };
-        $mainAttendes = json_decode($jsonAttendes, true);
+        $mainAttendes = json_decode($jsonAttendes);
         if (isset($_POST['hosts'])) {
             $hostUsers = array_map(function ($item) {
                 return json_decode(stripslashes($item), true);
@@ -311,30 +344,54 @@ function meethour_save_meeting_details($post_id)
         $options = $_POST['options'];
         $default_recording_storage = ($_POST['recording_storage']);
         $instructions = ($_POST['comment']);
-        // Schedule Meeting API
-        $scheduleBody = new ScheduleMeeting($meetingName, $passcode, $meetingTime, $meetingMeridiem, $meetingDate, $timezone);
-        $scheduleBody->attend = $mainAttendes;
-        $scheduleBody->hostusers = $mainHostUsers;
-        $scheduleBody->options = $options;
-        $scheduleBody->is_show_portal = 1;
-        $scheduleBody->default_recording_storage = $default_recording_storage;
-        $scheduleBody->agenda = $meeting_agenda;
-        $scheduleBody->duration_hr = $duration_hr;
-        $scheduleBody->duration_min = $duration_min;
-        $scheduleBody->instructions = $instructions;
-        $response = $meetHourApiService->scheduleMeeting(
-            $access_token,
-            $scheduleBody
-        );
 
-        if (!is_wp_error($response) && isset($response->data->meeting_id)) {
-            update_post_meta($post_id, 'meeting_id', $response->data->meeting_id);
-            update_post_meta($post_id, 'join_url', $response->data->joinURL);
+        if (empty($existing_posts)) {
+            // Schedule Meeting API
+            $scheduleBody = new ScheduleMeeting($meetingName, $passcode, $meetingTime, $meetingMeridiem, $meetingDate, $timezone);
+            $scheduleBody->attend = $mainAttendes;
+            $scheduleBody->hostusers = $mainHostUsers;
+            $scheduleBody->options = $options;
+            $scheduleBody->is_show_portal = 1;
+            $scheduleBody->default_recording_storage = $default_recording_storage;
+            $scheduleBody->agenda = $meeting_agenda;
+            $scheduleBody->duration_hr = $duration_hr;
+            $scheduleBody->duration_min = $duration_min;
+            $scheduleBody->instructions = $instructions;
+            $scheduleresponse = $meetHourApiService->scheduleMeeting(
+                $access_token,
+                $scheduleBody
+            );
+            $meeting_id = $scheduleresponse->data->meeting_id;
+            update_post_meta($post_id, 'meeting_id', $meeting_id);
+            update_post_meta($post_id, 'join_url', $scheduleresponse->data->join_url);
         } else {
-            wp_error($response->message);
+            //Updated Meeting API
+            $updateBody = new EditMeeting($post_meeting_id);
+            $updateBody->meeting_time = $meetingTime;
+            $updateBody->meeting_meridiem = $meetingMeridiem;
+            $updateBody->meeting_date = $meetingDate;
+            $updateBody->timezone = $timezone;
+            $updateBody->passcode = $passcode;
+            $updateBody->meeting_name = $meetingName;
+            $updateBody->attend = $mainAttendes;
+            $updateBody->hostusers = $mainHostUsers;
+            $updateBody->options = $options;
+            $updateBody->is_show_portal = 1;
+            $updateBody->default_recording_storage = $default_recording_storage;
+            $updateBody->agenda = $meeting_agenda;
+            $updateBody->duration_hr = $duration_hr;
+            $updateBody->duration_min = $duration_min;
+            $updateBody->instructions = $instructions;
+            $editresponse = $meetHourApiService->editMeeting(
+                $access_token,
+                $updateBody
+            );
+            update_post_meta($post_id, 'join_url', $editresponse->data->join_url);
+            update_post_meta($post_id, 'attendees', $editresponse->data->meeting_attendees);
         }
     }
 }
+
 
 function custom_js_to_head()
 {

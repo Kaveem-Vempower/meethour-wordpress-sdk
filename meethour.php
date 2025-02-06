@@ -57,15 +57,14 @@ function meethour_admin_menu()
             'manage_options', // Capability
             'edit.php?post_type=mh_recordings' // Menu slug
         );
-        add_submenu_page(
-            null,
-            'meethour-settings',         // Parent slug
-            'Generate Token',            // Page title
-            'Settings',            // Menu title
-            'manage_options',            // Required capability
-            'meethour-settings',         // Menu slug (same as parent to make it the default page)
-            'meethour_token_page'        // Function to display the page
-        );
+        // add_submenu_page(
+        //     'meethour-settings',         // Parent slug
+        //     'Generate Token',            // Page title
+        //     'Settings',            // Menu title
+        //     'manage_options',            // Required capability
+        //     'meethour-settings',         // Menu slug (same as parent to make it the default page)
+        //     'meethour_token_page'        // Function to display the page
+        // );
     }
 }
 

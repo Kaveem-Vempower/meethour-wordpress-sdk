@@ -50,11 +50,11 @@ function meethour_custom_column_content($column, $post_id)
             echo esc_html(get_post_meta($post_id, 'meeting_id', true));
             break;
         case 'date_time':
-            $start_time = get_post_meta($post_id, 'start_time', true);
+            $start_time = get_post_meta($post_id, 'meeting_date', true) . get_post_meta($post_id, 'meeting_time', true);
             echo esc_html(date('M d, Y h:i A', strtotime($start_time)));
             break;
         case 'duration':
-            echo esc_html(get_post_meta($post_id, 'duration', true) . 'm');
+            echo esc_html(get_post_meta($post_id, 'duration_hr', true) . get_post_meta($post_id, 'duration_min', true) . 'm');
             break;
         case 'agenda':
             $post = get_post($post_id);
@@ -169,18 +169,18 @@ function meethour_fetch_upcoming_meetings()
                 'meta_input'   => [
                     'id'         => $meet['id'],
                     'meeting_id' => $meet['meeting_id'],
-                    'date'       => explode(" ", $meet['start_time'])[0],
-                    'time'       => explode(" ", $meet['start_time'])[1],
-                    'duration hr'   => explode(":", $meet['duration'])[0],
-                    'duration min'  => explode(":", $meet['duration'])[1],
-                    'topic'      => $meet['topic'],
-                    'agenda'     => $meet['agenda'],
+                    'meeting_date'       => explode(" ", $meet['start_time'])[0],
+                    'meeting_time'       => explode(" ", $meet['start_time'])[1],
+                    'duration_hr'   => explode(":", $meet['duration'])[0],
+                    'duration_min'  => explode(":", $meet['duration'])[1],
+                    'meeting_name'      => $meet['topic'],
+                    'meeting_agenda'     => $meet['agenda'],
                     'timezone'   => $meet['timezone'],
                     'join_url'   => $meet['joinURL'],
-                    'passcode'   => $meet['passcode'],
+                    'meeting_passcode'   => $meet['passcode'],
                     'options'    => $meet['settings'],
-
-
+                    'instructions' => $meet['instructions'],
+                    'recording_storage' => $meet['recording_storage'],
                 ],
             ]);
         }

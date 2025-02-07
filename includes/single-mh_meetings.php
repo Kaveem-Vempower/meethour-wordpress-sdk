@@ -23,14 +23,29 @@ while (have_posts()) : the_post();
     $pcode = $params['pcode'];
 
     $current_user = get_the_ID();
+    $attendes = get_post_meta(get_the_ID(), 'attendes', true);
+    $attendes_ids = [];
+    foreach ($attendes as $attendes) {
+        $attendes_ids[] = $attendes->id;
+    }
+
     $body = new GenerateJwt($meeting_id);
-    if ($current_user == get_option('meethour_main_user', '')) {
+    // for meeting owner to login in meeting 
+    if ($current_user !== get_option('meethour_main_user', '')) {
         $body->$contact_id = $contact_id;
     }
-    $response = $meetHourApiService->generateJwt($token, $body);
+    // checks where wordpress user is invited in meeting & for not wordpress logged-in user and guest
+    elseif (in_array(get_current_user_id(), $attendes_ids) && !empty(get_the_ID())) {
+        $response = $meetHourApiService->generateJwt($token, $body);
+    } else {
+        $response = $meetHourApiService->generateJwt($token, $body);
+    }
+
+
     if ($response->success == true) {
         $jwt_token = $response->jwt;
     }
+
     if (!empty($meeting_id)) {
 ?>
         <!DOCTYPE html>

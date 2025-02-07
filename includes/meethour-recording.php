@@ -163,6 +163,10 @@ function meethour_update_recording()
 
     $body = new GetSingleRecording($recording_id);
     $response = $meetHourApiService->getSingleRecording($access_token, $body);
+    if ($response->success == false) {
+        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        return;
+    }
     error_log("This is GetSingleMeeting" . json_encode($response));
 
     // $response = wp_remote_post('https://api.meethour.io/api/v1.2/customer/getsinglerecording', [
@@ -225,9 +229,8 @@ function meethour_fetch_recordings()
     $main->limit = 20;
     $main->page = $current_page;
     $response = $meetHourApiService->recordingsList($access_token, $main);
-
-    if (is_wp_error($response)) {
-        wp_send_json_error('Error fetching recordings: ' . $response->get_error_message());
+    if ($response->success == false) {
+        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
         return;
     }
 

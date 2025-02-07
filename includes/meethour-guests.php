@@ -42,6 +42,10 @@ function meethour_fetch_users()
     $body = new ContactsList();
     $response = $meetHourApiService->ContactsList($access_token, $body);
 
+    if ($response->success == false) {
+        add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+    }
+
     $data = $response->contacts;
     foreach ($data as $contact) {
         $username = $contact->first_name . $contact->last_name;
@@ -143,9 +147,6 @@ function add_fetch_contacts_button()
                     }
                 });
             });
-
-            jQuery("body.post-type-mh_meetings #post-query-submit").append('<a style="margin-left:10px" href="#" id="sync-meet" class="page-title-action my-btn">Fetch Meet Hour Contacts</a>');
-
         });
     </script>
     <?php
@@ -207,16 +208,12 @@ function delete_meethour_user($user_id)
         if (!empty($meethour_user_id)) {
             $body = new DeleteContact($meethour_user_id);
             $response = $meetHourApiService->deleteContact($access_token, $body);
-            if ($response) {
-                error_log('Meethour user deleted successfully: ' . json_encode($response));
+            if ($response->success == false) {
+                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
             } else {
-                error_log('Failed to delete Meethour user: ' . json_encode($response));
+                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
             }
-        } else {
-            error_log('No Meethour User ID found for WordPress User ID: ' . $user_id);
         }
-    } else {
-        error_log('Admin chose not to delete Meethour user for WordPress User ID: ' . $user_id);
     }
 }
 
@@ -237,10 +234,14 @@ function create_user_in_my_app($user_id)
     }
     $body = new AddContact($email, $first_name, $last_name, $username);
     $response = $meetHourApiService->AddContact($token, $body);
-    $data = $response->data;
-    $meta_value = $data->id;
-    $meta_key = 'meethour_user_id';
-    add_user_meta($user_id, $meta_key, $meta_value, true);
+    if ($response->success == false) {
+        add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+    } else {
+        $data = $response->data;
+        $meta_value = $data->id;
+        $meta_key = 'meethour_user_id';
+        add_user_meta($user_id, $meta_key, $meta_value, true);
+    }
 }
 
 add_action('user_register', 'create_user_in_my_app', 10, 1);

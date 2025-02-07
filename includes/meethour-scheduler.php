@@ -11,6 +11,10 @@ function fetch_timeZone()
     $access_token = get_option('meethour_access_token', '');
     $meetHourApiService = new MHApiService();
     $response = $meetHourApiService->timezone($access_token);
+    if ($response->success == false) {
+        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        return;
+    }
     return $response->timezones;
 };
 
@@ -106,6 +110,7 @@ function meethour_render_meeting_details_meta_box($post)
     <table style="display: flex;" class="form-table">
         <tr>
             <p id="api-options" style="display: none;"><?php echo get_post_meta($post_id, 'options', true) ?></p>
+            <p id="api-options"><?php echo get_post_meta($post_id, 'attendes', true) ?></p>
             <th><label for="recurring_meetings">Recurring Meeting</label></th>
             <td>
                 <input id="id_AUTO_START_LIVESTREAMING" type="checkbox" name="options[]" value="AUTO_START_LIVESTREAMING" onclick="checklivestreamsettings();">
@@ -268,7 +273,6 @@ function meethour_render_meeting_details_meta_box($post)
             var options = JSON.parse(optionsString);
             console.log(options)
             updateCheckboxes(options);
-
         }
 
         function updateCheckboxes(options) {
@@ -292,6 +296,7 @@ function meethour_render_meeting_details_meta_box($post)
 add_action('save_post_mh_meetings', 'meethour_save_meeting_details');
 function meethour_save_meeting_details($post_id)
 {
+    error_log("Pubish Button Clicked");
     $post_meeting_id = get_post_meta($post_id, 'meeting_id', true);
     $existing_posts = get_posts([
         'post_type'   => 'mh_meetings',
@@ -299,7 +304,8 @@ function meethour_save_meeting_details($post_id)
         'meta_value'  => $post_meeting_id,
         'numberposts' => 1,
     ]);
-
+    error_log("This is Post Meeting ID:" . $post_meeting_id);
+    error_log("This is Existing Posts:" . json_encode($existing_posts));
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
     if (isset($_POST['meethour_meeting_details_nonce']) && wp_verify_nonce($_POST['meethour_meeting_details_nonce'], 'meethour_save_meeting_details')) {
@@ -328,9 +334,8 @@ function meethour_save_meeting_details($post_id)
             $jsonHostUsers = json_encode($hostUsers);
         }
         $mainHostUsers = json_decode($jsonHostUsers, true);
-        update_post_meta($post_id, 'attendes', $mainAttendes);
-        update_post_meta($post_id, 'hosts', $mainHostUsers);
 
+        update_post_meta($post_id, 'hosts', $mainHostUsers);
         $meetingName = sanitize_text_field($_POST['meeting_name'] ?? '');
         $meeting_agenda = sanitize_text_field($_POST['meeting_description'] ?? '');
         $passcode = sanitize_text_field($_POST['meeting_passcode'] ?? '');
@@ -345,8 +350,9 @@ function meethour_save_meeting_details($post_id)
         $default_recording_storage = ($_POST['recording_storage']);
         $instructions = ($_POST['comment']);
 
-        if (empty($existing_posts)) {
+        if ($post_meeting_id == NULL) {
             // Schedule Meeting API
+            error_log("Calling schedule meeting API");
             $scheduleBody = new ScheduleMeeting($meetingName, $passcode, $meetingTime, $meetingMeridiem, $meetingDate, $timezone);
             $scheduleBody->attend = $mainAttendes;
             $scheduleBody->hostusers = $mainHostUsers;
@@ -364,8 +370,10 @@ function meethour_save_meeting_details($post_id)
             $meeting_id = $scheduleresponse->data->meeting_id;
             update_post_meta($post_id, 'meeting_id', $meeting_id);
             update_post_meta($post_id, 'join_url', $scheduleresponse->data->join_url);
+            update_post_meta($post_id, 'attendes', $scheduleresponse->data->meeting_attendees);
         } else {
             //Updated Meeting API
+            error_log("Calling Edit meeting API");
             $updateBody = new EditMeeting($post_meeting_id);
             $updateBody->meeting_time = $meetingTime;
             $updateBody->meeting_meridiem = $meetingMeridiem;
@@ -386,6 +394,7 @@ function meethour_save_meeting_details($post_id)
                 $access_token,
                 $updateBody
             );
+            update_post_meta($post_id, 'meeting_id', $editresponse->data->meeting_id);
             update_post_meta($post_id, 'join_url', $editresponse->data->join_url);
             update_post_meta($post_id, 'attendees', $editresponse->data->meeting_attendees);
         }

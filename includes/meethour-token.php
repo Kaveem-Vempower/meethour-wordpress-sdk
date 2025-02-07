@@ -32,36 +32,32 @@ function meethour_token_page()
         $body = new Login($client_id, $client_secret, $grant_type, $username, $password);
         $response = $meetHourApiService->login($body);
         // Handle the API response
-        if (is_wp_error($response->access_token)) {
+        // if ($response->success == false) {
+        //     add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        //     return;
+        // }
+        $body = json_decode(wp_remote_retrieve_body($response->access_token), true);
+        if (isset($response->access_token)) {
+            update_option('meethour_access_token', $response->access_token);
+            update_option('meethour_access_token_expirey', $response->expires_in);
+            update_option('meethour_client_id', $client_id);
+            update_option('meethour_client_secret', $client_secret);
+            update_option('meethour_username', $username);
+            update_option('meethour_password', $password);
+            add_settings_error(
+                'meethour_messages',
+                'meethour_success',
+                'Access token generated and stored successfully!',
+                'success'
+            );
+        } else {
             add_settings_error(
                 'meethour_messages',
                 'meethour_error',
-                'Error: ' . $response->get_error_message(),
+                'Failed to generate access token. Please check your credentials.',
                 'error'
             );
-        } else {
-            $body = json_decode(wp_remote_retrieve_body($response->access_token), true);
-            if (isset($response->access_token)) {
-                update_option('meethour_access_token', $response->access_token);
-                update_option('meethour_access_token_expirey', $response->expires_in);
-                update_option('meethour_client_id', $client_id);
-                update_option('meethour_client_secret', $client_secret);
-                update_option('meethour_username', $username);
-                update_option('meethour_password', $password);
-                add_settings_error(
-                    'meethour_messages',
-                    'meethour_success',
-                    'Access token generated and stored successfully!',
-                    'success'
-                );
-            } else {
-                add_settings_error(
-                    'meethour_messages',
-                    'meethour_error',
-                    'Failed to generate access token. Please check your credentials.',
-                    'error'
-                );
-            }
+
             echo '<script type="text/javascript">window.location.reload()</script>';
         }
     }

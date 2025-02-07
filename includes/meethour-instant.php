@@ -40,12 +40,11 @@ function meethour_Instant_page()
             $data = $response->data;
             $message = isset($data->meeting_id) ? $response->message : 'No message available';
             $meeting_link = isset($data->meeting_id) ? $data->joinURL : 'No link available';
-            add_settings_error(
-                'meethour_messages',
-                'meethour_success',
-                esc_html($message) . ' Meeting Link: ' . esc_html($meeting_link),
-                'success'
-            );
+            if ($response->success == false) {
+                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+            } else {
+                add_settings_error('meethour_messages', 'meethour_success', esc_html($message) . ' Meeting Link: ' . esc_html($meeting_link), 'success');
+            }
         }
     }
 

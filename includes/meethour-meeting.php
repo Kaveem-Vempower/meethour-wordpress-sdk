@@ -209,33 +209,26 @@ add_action('wp_ajax_nopriv_meethour_fetch_upcoming_meetings', 'meethour_fetch_up
 add_action('wp_trash_post', 'Archive_Meethour_Post', 1, 1);
 function Archive_Meethour_Post($post_id)
 {
-?>
-    <script>
-        jQuery(document).ready(function($) {
-            if (!confirm('Are you sure you want to delete this Meeting for Meet Hour Portal?')) {
-                e.preventDefault();
-            } else {
-                <?php error_log("This is #220") ?>
-            }
-        });
-    </script>
-    <?php
-    echo "<script>alert('alert text')</script>";
-    $archive_meeting = isset($_POST['archive_meeting']) ? sanitize_text_field($_POST['archive_meeting']) : '';
-    if ($archive_meeting === 'yes') {
-        $meetHourApiService = new MHApiService();
-        $post = get_post($post_id);
-        $post_type = $post->post_type;
-        $token = get_option('meethour_access_token', '');
-        if ($post_type == 'mh_meetings') {
-            $meeting_id = get_post_meta($post_id, 'meeting_id', true);
-            $body = new ArchiveMeeting($meeting_id);
-            $response = $meetHourApiService->archiveMeeting($token, $body);
-            if ($response->success == false) {
-                add_settings_error('Meetings', 401, esc_html($response->message), 'error');
-                return;
-            } else {
-                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
+    $post_ststus = get_option('meeting_trash', '');
+    error_log(("This is the Post Status : " . $post_ststus));
+    if ($post_ststus == 'yes') {
+
+        $archive_meeting = isset($_POST['archive_meeting']) ? sanitize_text_field($_POST['archive_meeting']) : '';
+        if ($archive_meeting === 'yes') {
+            $meetHourApiService = new MHApiService();
+            $post = get_post($post_id);
+            $post_type = $post->post_type;
+            $token = get_option('meethour_access_token', '');
+            if ($post_type == 'mh_meetings') {
+                $meeting_id = get_post_meta($post_id, 'meeting_id', true);
+                $body = new ArchiveMeeting($meeting_id);
+                $response = $meetHourApiService->archiveMeeting($token, $body);
+                if ($response->success == false) {
+                    add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+                    return;
+                } else {
+                    add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
+                }
             }
         }
     }
@@ -244,16 +237,7 @@ function Archive_Meethour_Post($post_id)
 add_action('before_delete_post', 'Delete_Meethour_Post');
 function Delete_Meethour_Post($post_id)
 {
-    ?>
-    <script type="text/javascript">
-        jQuery(document).ready(function($) {
-            if (!confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
-                e.preventDefault();
-            } else {}
-        });
-    </script>
-<?php
-    echo "<script>alert('alert text')</script>";
+
     $meetHourApiService = new MHApiService();
     $post = get_post($post_id);
     $post_type = $post->post_type;
@@ -290,35 +274,39 @@ function Delete_Meethour_Post($post_id)
     }
 }
 
-// function add_delete_confirmation()
-// {
-//     global $pagenow,  $typenow;
+function add_delete_confirmation()
+{
+    global $pagenow,  $typenow;
 
-//     // Check if we're on the edit screen of your custom post type
-//     if ($pagenow == 'edit.php' && $typenow == 'mh_meetings') {
-//     
+    // Check if we're on the edit screen of your custom post type
+    if ($pagenow == 'edit.php' && $typenow == 'mh_meetings') {
+
 ?>
-<!-- //         <script type="text/javascript">
-//             jQuery(document).ready(function($) {
-//                 // Intercept delete link clicks
-//                 $('a.submitdelete, .bulkactions option[value="trash"]').click(function(e) {
-//                     if (!confirm('Are you sure you want to delete this Meeting for Meet Hour Portal?')) {
-//                         e.preventDefault();
-//                     } else {
-//                     }
-//                 });
-//             });
-//         </script> -->
-// <?php
-    //     }
+        <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Intercept delete link clicks
+                $('a.submitdelete, .bulkactions option[value="trash"]').click(function(e) {
+                    e.href
+                    if (confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
+                        window.location.href = 'http://localhost/mywordpress/wp-admin/post.php?post=62&action=trash&_wpnonce=4520dea869&meethour_delete=true'
+                    } else {
+                        <?php update_option("meeting_trash", "no");
+                        error_log("This is Update option false") ?>
+                    }
+                });
+            });
+            //         
+        </script>
+        <?php
+        //     }
 
-    //     // Check if we're on the single edit screen of your custom post type
-    //     if ($pagenow == 'post.php') {
-    //         $post_type = get_post_type();
-    //         if ($post_type == 'mh_meetings') {
-    //         
-    ?>
-<!-- //             <script type="text/javascript">
+        //     // Check if we're on the single edit screen of your custom post type
+        //     if ($pagenow == 'post.php') {
+        //         $post_type = get_post_type();
+        //         if ($post_type == 'mh_meetings') {
+        //         
+        ?>
+        <!-- //             <script type="text/javascript">
 //                 jQuery(document).ready(function($) {
 //                     // Intercept the "Move to Trash" button click
 //                     $('#delete-action a').click(function(e) {
@@ -329,8 +317,8 @@ function Delete_Meethour_Post($post_id)
 //                     });
 //                 });
 //             </script> -->
-// <?php
-//         }
-//     }
-// }
-// add_action('admin_footer', 'add_delete_confirmation');
+<?php
+        //         }
+    }
+}
+add_action('admin_footer', 'add_delete_confirmation');

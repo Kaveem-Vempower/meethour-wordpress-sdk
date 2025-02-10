@@ -39,6 +39,11 @@ function meethour_render_meeting_details_meta_box($post)
     $post_id = $post->ID;
     $wordpress_user_data = wordpress_fetch_users();
     $timeZones = fetch_timeZone();
+    $attendes_response = json_decode(get_post_meta($post_id, 'attendes', true));
+    if (!empty($attendes_response)) {
+        $selected_attendes_emails = array_column($attendes_response, 'email');
+        error_log("These are Selected Attendes Emails: " . json_encode($selected_attendes_emails));
+    }
     wp_nonce_field('meethour_save_meeting_details', 'meethour_meeting_details_nonce');
 ?>
     <table style="display: flex;" class="form-table">
@@ -85,11 +90,16 @@ function meethour_render_meeting_details_meta_box($post)
             <td>
                 <select name="attendes[]" id="attendes" class="select2-select req" style="width: 90%;" onChange="getSelectedAttendes(this)" type="multiselect" multiple>
                     <?php foreach ($wordpress_user_data as $user) {
-                        $firstName = isset($user->metadata["first_name"]) ? $user->metadata["first_name"] : '';
-                        $lastName = isset($user->metadata["last_name"]) ? $user->metadata["last_name"] : '';
+                        $firstName = isset($user->usermeta["first_name"]) ? $user->usermeta["first_name"] : '';
+                        $lastName = isset($user->usermeta["last_name"]) ? $user->usermeta["last_name"] : '';
                         $email = isset($user->user_email) ? $user->user_email : '';
+                        if (!empty($attendes_response)) {
+                            $selected = in_array($email, $selected_attendes_emails) ? 'selected' : '';
+                        } else {
+                            $selected = '';
+                        }
                     ?>
-                        <option value='<?php echo htmlspecialchars(json_encode(array("firstName" => $firstName, "lastName" => $lastName, "email" => $email)), ENT_QUOTES); ?>'>
+                        <option value='<?php echo htmlspecialchars(json_encode(array("firstName" => $firstName, "lastName" => $lastName, "email" => $email)), ENT_QUOTES); ?>' <?php echo $selected ?>>
                             <?php echo htmlspecialchars($email); ?>
                         </option>
                     <?php } ?>
@@ -109,8 +119,6 @@ function meethour_render_meeting_details_meta_box($post)
     </table>
     <table style="display: flex;" class="form-table">
         <tr>
-            <p id="api-options" style="display: none;"><?php echo get_post_meta($post_id, 'options', true) ?></p>
-            <p id="api-options"><?php echo get_post_meta($post_id, 'attendes', true) ?></p>
             <th><label for="recurring_meetings">Recurring Meeting</label></th>
             <td>
                 <input id="id_AUTO_START_LIVESTREAMING" type="checkbox" name="options[]" value="AUTO_START_LIVESTREAMING" onclick="checklivestreamsettings();">
@@ -128,6 +136,7 @@ function meethour_render_meeting_details_meta_box($post)
             </td>
         </tr>
         <tr>
+            <p style="display: none;" id="hosts"><?php echo get_post_meta($post_id, 'hosts', true); ?></p>
             <th><label for="sound_controls">Sound Controls</label></th>
             <td>
                 <input type="checkbox" name="options[]" value="PARTICIPANT_JOINED_SOUND_ID" class="input border mr-2" id="vertical-checkbox-participant-joined-sound-id">
@@ -236,35 +245,86 @@ function meethour_render_meeting_details_meta_box($post)
         }
     </style>
     <script>
-        function getSelectedAttendes(sel) {
-            attendes = document.getElementById('attendes')
-            mod_element = document.getElementById('Moderator')
-            var opts = [],
-                opt;
-            var len = sel.options.length;
-            for (var i = 0; i < len; i++) {
-                opt = sel.options[i];
-                if (opt.selected) {
-                    opts.push(opt.value);
-                    console.log(opt.value)
+        function selectedHosts() {
+            var dnd = document.getElementById('attendes');
+            const mod_element = document.getElementById('Moderator');
+            mod_element.innerHTML = ''; // Clear previous moderators
+            var selected = dnd.selectedOptions;
+            selectedArr = (Array.from(selected).map(option => JSON.parse(option.value)));
+            console.log(selectedArr);
+            const selectedOptions = Array.from(dnd.selectedOptions);
+            var ishost = document.getElementById('hosts')
+            var jsonishost = JSON.parse(ishost.innerText);
+            console.log(jsonishost);
+
+            selectedOptions.forEach((option, index) => {
+                const firstName = option.getAttribute('data-firstname');
+                const lastName = option.getAttribute('data-lastname');
+                const email = (option.value);
+                const text = option.innerText;
+                const checkboxId = `moderator-checkbox-${index}`;
+
+                const ishostEmail = jsonishost[index].email;
+                console.log(ishostEmail);
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'hosts[]';
+                checkbox.value = email;
+                checkbox.id = checkboxId;
+                if (ishostEmail == text) {
+                    checkbox.checked = true;
+                } else {
+                    checkbox.checked = false;
                 }
-            }
-            if (opts.length > 0) {
-                mod_element.innerHTML = "";
-                opts.forEach(opt => {
-                    const options = document.createElement("span");
-                    const br = document.createElement("br")
-                    Jsonopt = JSON.parse(opt)
-                    options.innerHTML = `
-            <input type="checkbox" name="hosts[]" value='${opt}' id="vertical-checkbox-guest-user" >
-            <label for="vertical-checkbox-guest-user">${Jsonopt.email}</label>
-            `;
-                    mod_element.appendChild(options);
-                    mod_element.appendChild(br);
-                    mod_element.appendChild(br);
-                });
-            }
-            return opts;
+
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                label.textContent = `${text}`;
+
+                const lineBreak = document.createElement('br');
+
+                mod_element.appendChild(checkbox);
+                mod_element.appendChild(label);
+                mod_element.appendChild(lineBreak);
+            });
+        }
+        selectedHosts();
+
+        function getSelectedAttendes(sel) {
+            var dnd = document.getElementById('attendes');
+            const mod_element = document.getElementById('Moderator');
+            mod_element.innerHTML = ''; // Clear previous moderators
+            var selected = dnd.selectedOptions;
+            selectedArr = (Array.from(selected).map(option => JSON.stringify(option.value)));
+            console.log("These are Selected Options Value #294: " + selectedArr);
+            const selectedOptions = Array.from(dnd.selectedOptions);
+
+            selectedOptions.forEach((option, index) => {
+                const firstName = option.getAttribute('data-firstname');
+                const lastName = option.getAttribute('data-lastname');
+                const email = (option.value);
+                const text = option.innerText;
+
+
+                const checkboxId = `moderator-checkbox-${index}`;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'hosts[]';
+                checkbox.value = email;
+                checkbox.id = checkboxId;
+
+                const label = document.createElement('label');
+                label.htmlFor = checkboxId;
+                label.textContent = `${text}`;
+
+                const lineBreak = document.createElement('br');
+
+                mod_element.appendChild(checkbox);
+                mod_element.appendChild(label);
+                mod_element.appendChild(lineBreak);
+            });
         }
         // Function to fetch options and update checkboxes
         function fetchAndUpdateCheckboxes() {
@@ -296,16 +356,7 @@ function meethour_render_meeting_details_meta_box($post)
 add_action('save_post_mh_meetings', 'meethour_save_meeting_details');
 function meethour_save_meeting_details($post_id)
 {
-    error_log("Pubish Button Clicked");
     $post_meeting_id = get_post_meta($post_id, 'meeting_id', true);
-    $existing_posts = get_posts([
-        'post_type'   => 'mh_meetings',
-        'meta_key'    => 'meeting_id',
-        'meta_value'  => $post_meeting_id,
-        'numberposts' => 1,
-    ]);
-    error_log("This is Post Meeting ID:" . $post_meeting_id);
-    error_log("This is Existing Posts:" . json_encode($existing_posts));
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
     if (isset($_POST['meethour_meeting_details_nonce']) && wp_verify_nonce($_POST['meethour_meeting_details_nonce'], 'meethour_save_meeting_details')) {
@@ -334,8 +385,8 @@ function meethour_save_meeting_details($post_id)
             $jsonHostUsers = json_encode($hostUsers);
         }
         $mainHostUsers = json_decode($jsonHostUsers, true);
-
-        update_post_meta($post_id, 'hosts', $mainHostUsers);
+        update_post_meta($post_id, 'attendes', $jsonAttendes);
+        update_post_meta($post_id, 'hosts', $jsonHostUsers);
         $meetingName = sanitize_text_field($_POST['meeting_name'] ?? '');
         $meeting_agenda = sanitize_text_field($_POST['meeting_description'] ?? '');
         $passcode = sanitize_text_field($_POST['meeting_passcode'] ?? '');
@@ -370,7 +421,6 @@ function meethour_save_meeting_details($post_id)
             $meeting_id = $scheduleresponse->data->meeting_id;
             update_post_meta($post_id, 'meeting_id', $meeting_id);
             update_post_meta($post_id, 'join_url', $scheduleresponse->data->join_url);
-            update_post_meta($post_id, 'attendes', $scheduleresponse->data->meeting_attendees);
         } else {
             //Updated Meeting API
             error_log("Calling Edit meeting API");
@@ -396,7 +446,6 @@ function meethour_save_meeting_details($post_id)
             );
             update_post_meta($post_id, 'meeting_id', $editresponse->data->meeting_id);
             update_post_meta($post_id, 'join_url', $editresponse->data->join_url);
-            update_post_meta($post_id, 'attendees', $editresponse->data->meeting_attendees);
         }
     }
 }

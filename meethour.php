@@ -45,6 +45,13 @@ function meethour_admin_menu()
         );
         add_submenu_page(
             'meethour-settings', // Parent slug
+            'Schedule Meeting', // Page title
+            'Schedule Meeting', // Menu title
+            'manage_options', // Capability
+            'post-new.php?post_type=mh_meetings' // Menu slug
+        );
+        add_submenu_page(
+            'meethour-settings', // Parent slug
             'Meetings', // Page title
             'Meetings', // Menu title
             'manage_options', // Capability
@@ -133,6 +140,11 @@ function meethour_deactivate()
     delete_option('meethour_api_key');
     delete_option('mh_meetings_total_pages');
     delete_option('mh_meetings_current_page');
+    delete_option('mh_recordings_total_pages');
+    delete_option('mh_recordings_current_page');
+    delete_option('meethour_main_user');
+    delete_option('mh_recordings_post_limit');
+    delete_option('mh_meetings_post_limit');
 }
 add_action('wp_ajax_meethour_deactivate', 'meethour_deactivate'); // For logged-in users 
 

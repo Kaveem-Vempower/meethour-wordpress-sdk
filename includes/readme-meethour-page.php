@@ -18,6 +18,9 @@ function meethour_readme_page()
             text-decoration: none;
             white-space: nowrap;
         } */
+        .points {
+            font-size: small;
+        }
 
         .content {
             background: white;
@@ -111,6 +114,357 @@ function meethour_readme_page()
                                 <h2 class="svelte-prhgxu">Description</h2>
                                 <div class="section plugin-description svelte-xiu0ih">
                                     <p>Discover the power of video conferencing with Meet Hour. Learn what video conferencing is, explore its diverse applications across industries, and find out why Meet Hour stands out as your preferred choice. Explore key features, reliability, and seamless integration options for your technology stacks. Join the future of remote collaboration with Meet Hour.</p>
+
+                                    <!-- Markdown Code -->
+
+                                    <hr>
+                                    <h2 id="getting-started">Getting Started</h2>
+                                    <h3 id="1-activate-the-plugin">1. Activate the Plugin</h3>
+                                    <p>After activating the plugin, head over to the <a href="https://portal.meethour.io/customer/developers">Meethour Developer Portal</a>. You&#39;ll need a developer account to access this page.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Find Your Credentials</strong>: In the <strong>Developer</strong> section, locate your <strong>Client ID</strong>, <strong>Client Secret</strong>, and <strong>API Key</strong>.</p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Configure Plugin Settings</strong>: Go back to your WordPress dashboard and navigate to the plugin settings page.
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Insert the <strong>Client ID</strong>, <strong>Client Secret</strong>, and <strong>API Key</strong>.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Click on <strong>Generate Access Token</strong>.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Unlock Features</strong>: Once you&#39;ve generated the access token, all the plugin&#39;s features will be available to you.</p>
+                                        </li>
+                                    </ul>
+                                    <hr>
+                                    <h2 id="user-management">User Management</h2>
+                                    <h3 id="2-sync-and-manage-users">2. Sync and Manage Users</h3>
+                                    <p>Navigate to the <strong>Users</strong> section in WordPress. With the plugin activated, you&#39;ll notice new options like <strong>Fetch Meethour Users</strong>.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Fetch Meethour Users</strong>: Click this to import all your Meethour users into your WordPress database.</p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Two-Way Synchronization</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Actions you perform on users with the <strong>Meethour</strong> role in WordPress can also affect those users in the Meethour portal.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">You&#39;ll have the option to decide whether changes in WordPress should reflect on the Meethour portal.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Creating Users</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">When you create a new user in WordPress, assign them the <strong>Meethour</strong> role.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">This will automatically create a corresponding user in the Meethour portal.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points"><em>Note</em>: Synchronization won&#39;t work if the user isn&#39;t assigned the <strong>Meethour</strong> role.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Deleting Users</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">When deleting a user with the <strong>Meethour</strong> role, you&#39;ll be prompted to choose whether to remove them from the Meethour portal as well.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <hr>
+                                    <h2 id="meetings">Meetings</h2>
+                                    <h3 id="3-instant-meeting">3. Instant Meeting</h3>
+                                    <p>Need a quick meeting without the fuss? The <strong>Instant Meeting</strong> feature is your go-to.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Creating an Instant Meeting</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Provide a <strong>Meeting Name</strong> and <strong>Passcode</strong>.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Click <strong>Create</strong>, and you&#39;re all set!</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Shortcode</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">After creating the meeting, click <strong>Copy Shortcode</strong>.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Paste this shortcode into any post or page to embed the meeting directly on your site.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Link</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Copy the meeting link to share with participants.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Paste it into your browser to join the meeting instantly.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <h3 id="4-schedule-meeting">4. Schedule Meeting</h3>
+                                    <p>For more detailed setups, use the <strong>Schedule Meeting</strong> option.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Setting Up a Meeting</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Fill in the meeting details—date, time, agenda, and any other preferences.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">You&#39;ll have more customization options here compared to an instant meeting.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Publishing the Meeting</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Click <strong>Publish</strong> to create the meeting.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">You&#39;ll receive a <strong>Permalink</strong> to the meeting post.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Editing the Meeting</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">After publishing, you&#39;ll be redirected to the <strong>Edit Meeting</strong> page.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Any updates you make here will sync with the Meethour portal.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">The meeting link remains the same even after updates.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <h3 id="5-manage-meetings">5. Manage Meetings</h3>
+                                    <p>In the <strong>Meetings</strong> section, you can view all meetings created in WordPress and fetch meetings from the Meethour portal.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Fetching Meetings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Click on <strong>Fetch Meethour Meetings</strong>.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Each click fetches 20 meetings from the portal.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">If you have more meetings (e.g., 100), click the button multiple times until all meetings are imported.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Meeting Details</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">View <strong>Meeting ID</strong>, <strong>Duration</strong>, <strong>Agenda</strong>, <strong>Meeting Link</strong>, and <strong>External Meeting Link</strong>.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Joining Meetings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points"><strong>Meeting Link</strong>: Opens the meeting within your WordPress site. Invited users will be automatically signed in.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points"><strong>External Link</strong>: Opens the meeting in a new browser tab.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Shortcodes</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Copy the shortcode to embed the meeting in any post or page.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Managing Meetings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points"><strong>Edit</strong>, <strong>Move to Trash</strong>, or <strong>Delete</strong> meetings.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">When deleting, you&#39;ll be asked if you want to remove the meeting from the Meethour portal as well.
+                                                    <ul>
+                                                        <li>
+                                                            <p class="points"><strong>Agree</strong>: The meeting is archived and deleted from both WordPress and Meethour.</p>
+                                                        </li>
+                                                        <li>
+                                                            <p class="points"><strong>Disagree</strong>: The meeting is removed from WordPress but remains on Meethour.</p>
+                                                        </li>
+                                                    </ul>
+                                                    </p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Sync Upcoming Meetings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">The <strong>Sync Upcoming Meetings from Meethour</strong> button fetches only upcoming meetings.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points"><em>Important</em>: Only future meetings are synced with this option.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <hr>
+                                    <h2 id="recordings">Recordings</h2>
+                                    <h3 id="6-manage-recordings">6. Manage Recordings</h3>
+                                    <p>Access all your recordings in the <strong>Recordings</strong> section, and fetch new ones from the Meethour portal.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>Fetching Recordings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Click <strong>Fetch Meethour Recordings</strong>.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Each click imports 20 recordings.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">For more recordings, click multiple times as needed.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Recording Details</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">View <strong>Recording Name</strong>, <strong>Duration</strong>, <strong>Size</strong>, <strong>Recording Link</strong>, and <strong>Recording Date</strong>.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Viewing Recordings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points"><strong>Recording Link</strong>: Opens the recording within your WordPress site.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">You can integrate recordings with other plugins or embed them in posts.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Shortcodes</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Copy the shortcode to embed the recording in any post or page.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Deleting Recordings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Choose whether to delete recordings from the Meethour portal when removing them from WordPress.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>Refresh Shortcodes</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">If a shortcode expires, use the <strong>Refresh Shortcode</strong> option to update it automatically.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <hr>
+                                    <h2 id="shortcodes">Shortcodes</h2>
+                                    <h3 id="7-using-shortcodes">7. Using Shortcodes</h3>
+                                    <p>Leverage shortcodes to integrate Meethour functionalities throughout your WordPress site.</p>
+                                    <ul>
+                                        <li>
+                                            <p class="points"><strong>For Meetings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points"><code>[meethour meeting_id=&quot;your_meeting_id&quot;]</code></p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>For Recordings</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points"><code>[meethour recording_id=&quot;your_recording_id&quot;]</code></p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                        <li>
+                                            <p class="points"><strong>How to Use</strong>:
+                                            <ul>
+                                                <li>
+                                                    <p class="points">Copy the relevant shortcode.</p>
+                                                </li>
+                                                <li>
+                                                    <p class="points">Paste it into any post or page where you want the meeting or recording to appear.</p>
+                                                </li>
+                                            </ul>
+                                            </p>
+                                        </li>
+                                    </ul>
+                                    <hr>
+
+
+                                    <!-- Markdown Code -->
+
+                                    <!-- 
+
                                     <h2 class="svelte-prhgxu">FAQ</h2>
                                     <div class="accordion">
                                         <div class="accordion__item">
@@ -222,7 +576,7 @@ function meethour_readme_page()
                                                 </p>
                                             </div>
                                         </div>
-                                    </div>
+                                    </div> -->
                                     <h3>Features</h3>
                                     <ul>
                                         <li>
@@ -334,6 +688,8 @@ function meethour_readme_page()
                                                 Meet Hour allows picture in picture mode when users are sharing the screen.</p>
                                         </li>
                                     </ul>
+                                    <hr>
+
                                     <h3>Use Cases</h3>
                                     <ul>
                                         <li>

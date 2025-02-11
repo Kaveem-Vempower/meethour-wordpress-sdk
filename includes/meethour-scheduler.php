@@ -12,9 +12,10 @@ function fetch_timeZone()
     $meetHourApiService = new MHApiService();
     $response = $meetHourApiService->timezone($access_token);
     if ($response->success == false) {
-        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
         return;
     }
+    settings_errors('meethour_messages');
     return $response->timezones;
 };
 
@@ -421,6 +422,13 @@ function meethour_save_meeting_details($post_id)
             $meeting_id = $scheduleresponse->data->meeting_id;
             update_post_meta($post_id, 'meeting_id', $meeting_id);
             update_post_meta($post_id, 'join_url', $scheduleresponse->data->join_url);
+
+            if ($scheduleresponse->success == false) {
+                add_settings_error('meethour_messages', 401, esc_html($scheduleresponse->message), 'error');
+            }
+            if ($scheduleresponse->success == true) {
+                add_settings_error('meethour_messages', 401, esc_html($scheduleresponse->message), 'success');
+            }
         } else {
             //Updated Meeting API
             error_log("Calling Edit meeting API");
@@ -446,18 +454,32 @@ function meethour_save_meeting_details($post_id)
             );
             update_post_meta($post_id, 'meeting_id', $editresponse->data->meeting_id);
             update_post_meta($post_id, 'join_url', $editresponse->data->join_url);
+            if ($scheduleresponse->success == false) {
+                add_settings_error('meethour_messages', 401, esc_html($editresponse->message), 'error');
+            }
+            if ($scheduleresponse->success == true) {
+                add_settings_error('meethour_messages', 401, esc_html($editresponse->message), 'success');
+            }
         }
     }
+    settings_errors('meethour_messages');
 }
 
 
 function custom_js_to_head()
 {
-
+    $page_limit_meetings = get_option('mh_meetings_post_limit', '');
+    if ($page_limit_meetings == null) {
+        $page_limit_meetings = "1-20";
+    }
+    $page_limit_recordings = get_option('mh_recordings_post_limit', '');
+    if ($page_limit_recordings == null) {
+        $page_limit_recordings = "1-20";
+    }
 ?>
     <script>
         jQuery(function($) {
-            $("body.post-type-mh_meetings .wrap h1").append('<button href="#" id="sync-meetings" style="margin-left:10px" class="page-title-action my-btn">Sync Upcomming Meetings from Meet Hour (20 at a time)</button>');
+            $("body.post-type-mh_meetings .wrap h1").append('<button href="#" id="sync-meetings" style="margin-left:10px" class="page-title-action my-btn">Sync Upcomming Meetings from Meet Hour <strong>( <?php echo $page_limit_meetings ?> )</strong></button>');
 
             $.fn.buttonLoader = function(action) {
                 var self = $(this);
@@ -506,7 +528,7 @@ function custom_js_to_head()
                 });
             });
 
-            $("body.post-type-mh_recordings .wrap h1").append('<a href="#" id="sync-recordings"  style="margin-left:10px" class="page-title-action my-btn">Fetch Recordings</a>');
+            $("body.post-type-mh_recordings .wrap h1").append('<a href="#" id="sync-recordings"  style="margin-left:10px" class="page-title-action my-btn">Fetch Recordings from Meet Hour <strong>( <?php echo $page_limit_recordings ?> )</strong></a>');
 
             $("#sync-recordings").on("click", function(event) {
                 event.preventDefault();
@@ -591,15 +613,29 @@ function add_custom_post_type_template($single_template)
 {
     global $post;
 
-    if ($post->post_type == 'mh_meetings') {
-        $single_template = dirname(__FILE__) . '/single-mh_meetings.php';
+    // Check if $post is set
+    if (isset($post)) {
+        // Debugging output
+        error_log('Post type: ' . $post->post_type);
+
+        if ($post->post_type == 'mh_meetings') {
+            $new_template = get_stylesheet_directory() . '/single-mh_meetings.php';
+            error_log('Using template: ' . $new_template);
+            return $new_template;
+        }
+
+        if ($post->post_type == 'mh_recordings') {
+            $new_template = get_stylesheet_directory() . '/single-mh_recordings.php';
+            error_log('Using template: ' . $new_template);
+            return $new_template;
+        }
+    } else {
+        error_log('Global $post is not set.');
     }
 
-    if ($post->post_type == 'mh_recordings') {
-        $single_template = dirname(__FILE__) . '/single-mh_recordings.php';
-    }
     return $single_template;
 }
 
 add_filter('single_template', 'add_custom_post_type_template');
+
 ?>

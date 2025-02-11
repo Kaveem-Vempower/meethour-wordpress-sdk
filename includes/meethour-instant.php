@@ -48,7 +48,6 @@ function meethour_Instant_page()
         }
     }
 
-    // Display any error/success messages
     settings_errors('meethour_messages');
 ?>
     <div class="wrap">

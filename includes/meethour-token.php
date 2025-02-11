@@ -31,11 +31,7 @@ function meethour_token_page()
 
         $body = new Login($client_id, $client_secret, $grant_type, $username, $password);
         $response = $meetHourApiService->login($body);
-        // Handle the API response
-        // if ($response->success == false) {
-        //     add_settings_error('Meetings', 401, esc_html($response->message), 'error');
-        //     return;
-        // }
+
         $body = json_decode(wp_remote_retrieve_body($response->access_token), true);
         if (isset($response->access_token)) {
             update_option('meethour_access_token', $response->access_token);

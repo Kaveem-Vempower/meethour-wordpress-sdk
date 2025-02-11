@@ -100,7 +100,6 @@ function meethour_sortable_columns_orderby($query)
     if (!is_admin()) {
         return;
     }
-
     $orderby = $query->get('orderby');
 
     if ('meeting_id' === $orderby) {
@@ -117,6 +116,7 @@ function meethour_sortable_columns_orderby($query)
 
 function meethour_fetch_upcoming_meetings()
 {
+
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
 
@@ -134,16 +134,25 @@ function meethour_fetch_upcoming_meetings()
         $current_page = 1;
         update_option('mh_meetings_current_page', $current_page);
     };
-    $body = new UpcomingMeetings();
-    $body->limit = 20;
-    $body->page = $current_page;
 
+    $posts_per_page = 20;
+    $start = ($current_page - 1) * $posts_per_page + 1;
+    $end = $current_page * $posts_per_page;
+    $post_limit = "{$start}-{$end}";
+    update_option('mh_meetings_post_limit', $post_limit);
+
+    $body = new UpcomingMeetings();
+    $body->limit = $posts_per_page;
+    $body->page = $current_page;
     $response = $meetHourApiService->upcomingMeetings($access_token, $body);
 
     if ($response->success == false) {
         add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
         return;
     }
+
+    settings_errors('meethour_messages');
+
 
     if (is_null($total_pages)) {
         $total_pages = $response->total_pages;
@@ -209,34 +218,49 @@ add_action('wp_ajax_nopriv_meethour_fetch_upcoming_meetings', 'meethour_fetch_up
 add_action('wp_trash_post', 'Archive_Meethour_Post', 1, 1);
 function Archive_Meethour_Post($post_id)
 {
-    $post_ststus = get_option('meeting_trash', '');
-    error_log(("This is the Post Status : " . $post_ststus));
-    if ($post_ststus == 'yes') {
 
-        $archive_meeting = isset($_POST['archive_meeting']) ? sanitize_text_field($_POST['archive_meeting']) : '';
-        if ($archive_meeting === 'yes') {
-            $meetHourApiService = new MHApiService();
-            $post = get_post($post_id);
-            $post_type = $post->post_type;
-            $token = get_option('meethour_access_token', '');
-            if ($post_type == 'mh_meetings') {
-                $meeting_id = get_post_meta($post_id, 'meeting_id', true);
-                $body = new ArchiveMeeting($meeting_id);
-                $response = $meetHourApiService->archiveMeeting($token, $body);
-                if ($response->success == false) {
-                    add_settings_error('Meetings', 401, esc_html($response->message), 'error');
-                    return;
-                } else {
-                    add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
-                }
+    $currentPageUrl = 'http://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
+
+    error_log("This is the Current URL : " . $currentPageUrl);
+
+    $parsed_url = parse_url($currentPageUrl);
+    $query = $parsed_url['query'];
+    parse_str($query, $params);
+    $meeting_archive = $params['meeting_trash'];
+    error_log("This is the Meeting Archive : " . $meeting_archive);
+    if ($meeting_archive === 'yes') {
+        error_log("Meeting Archived from Meethour Portal SUccessfully");
+        $meetHourApiService = new MHApiService();
+        $post = get_post($post_id);
+        $post_type = $post->post_type;
+        $token = get_option('meethour_access_token', '');
+        if ($post_type == 'mh_meetings') {
+            $meeting_id = get_post_meta($post_id, 'meeting_id', true);
+            $body = new ArchiveMeeting($meeting_id);
+            $response = $meetHourApiService->archiveMeeting($token, $body);
+            if ($response->success == false) {
+                add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
+                return;
+            } else {
+                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
             }
         }
+        settings_errors('meethour_messages');
     }
 }
+
 
 add_action('before_delete_post', 'Delete_Meethour_Post');
 function Delete_Meethour_Post($post_id)
 {
+
+    $currentPageUrl = 'http://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
+    $parsed_url = parse_url($currentPageUrl);
+    $query = $parsed_url['query'];
+    parse_str($query, $params);
+    $meeting_delete = $params['meeting_delete'];
+    $recording_delete = $params['recording_delete'];
+    error_log("This is the Meeting Delete : " . $meeting_delete);
 
     $meetHourApiService = new MHApiService();
     $post = get_post($post_id);
@@ -246,8 +270,7 @@ function Delete_Meethour_Post($post_id)
     $meeting_id = get_post_meta($post_id, 'meeting_id', true);
     error_log('Meeting ID : ' . $meeting_id);
 
-    $delete_meeting = isset($_POST['delete_meeting']) ? sanitize_text_field($_POST['delete_meeting']) : '';
-    if ($delete_meeting === 'yes') {
+    if ($meeting_delete === 'yes') {
         if ($post_type == 'mh_meetings') {
             echo '<script>alert("This is mh_meeting Post Type");</script>';
             error_log('This is mh_meeting Post Type');
@@ -255,21 +278,20 @@ function Delete_Meethour_Post($post_id)
             $meeting_response = $meetHourApiService->deleteMeeting($token, $body);
             if ($meeting_response->success == false) {
                 add_settings_error('Meetings', 401, esc_html($meeting_response->message), 'error');
-                return;
+                settings_errors();
             }
             error_log('Delete Meeting Response : ' . json_encode($meeting_response));
         }
     }
-    $delete_recording = isset($_POST['delete_recording']) ? sanitize_text_field($_POST['delete_recording']) : '';
-    if ($delete_recording === 'yes') {
+    if ($recording_delete === 'yes') {
         if ($post_type == 'mh_recordings') {
             $recording_id = get_post_meta($post_id, 'recording_id', true);
-            $main = new DeleteRecording($recording_id); //change to Delete Recording type 
+            $main = new DeleteRecording($recording_id);
             $response = $meetHourApiService->deleteRecording($token, $main);
             if ($response->success == false) {
-                add_settings_error('Meetings', 401, esc_html($response->message), 'error');
-                return;
+                add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
             }
+            settings_errors('meethour_messages');
         }
     }
 }
@@ -277,48 +299,89 @@ function Delete_Meethour_Post($post_id)
 function add_delete_confirmation()
 {
     global $pagenow,  $typenow;
-
     // Check if we're on the edit screen of your custom post type
     if ($pagenow == 'edit.php' && $typenow == 'mh_meetings') {
-
 ?>
         <script type="text/javascript">
-            jQuery(document).ready(function($) {
+            document.addEventListener('DOMContentLoaded', function() {
+
                 // Intercept delete link clicks
-                $('a.submitdelete, .bulkactions option[value="trash"]').click(function(e) {
-                    e.href
-                    if (confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
-                        window.location.href = 'http://localhost/mywordpress/wp-admin/post.php?post=62&action=trash&_wpnonce=4520dea869&meethour_delete=true'
-                    } else {
-                        <?php update_option("meeting_trash", "no");
-                        error_log("This is Update option false") ?>
-                    }
+                document.querySelectorAll('a.submitdelete, .bulkactions option[value="trash"]').forEach(function(element) {
+                    element.addEventListener('click', function(e) {
+                        const queryString = element.closest('a').href;
+                        const urlParams = new URLSearchParams(queryString);
+                        const action = urlParams.get('action');
+
+                        if (action == 'trash') {
+                            if (!confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
+                                e.preventDefault();
+                                let url = element.closest('a').href;
+                                console.log("This is the Current URL: " + url);
+                                url = url + "&meeting_trash=no"
+                                window.location.href = url;
+                                console.log("This is URL : " + url)
+                            } else {
+                                e.preventDefault();
+                                let url = element.closest('a').href;
+                                console.log("This is the Current URL: " + url);
+                                url = url + "&meeting_trash=yes"
+                                window.location.href = url;
+                                console.log("This is URL : " + url);
+                            }
+                        }
+
+                        if (action == 'delete') {
+                            if (!confirm('Are you sure you want to Delete this Meeting for Meet Hour Portal?')) {
+                                e.preventDefault();
+                                let url = element.closest('a').href;
+                                console.log("This is the Current URL: " + url);
+                                url = url + "&meeting_delete=no"
+                                window.location.href = url;
+                                console.log("This is URL : " + url)
+                            } else {
+                                e.preventDefault();
+                                let url = element.closest('a').href;
+                                console.log("This is the Current URL: " + url);
+                                url = url + "&meeting_delete=yes"
+                                window.location.href = url;
+                                console.log("This is URL : " + url);
+                            }
+                        };
+                    });
                 });
             });
-            //         
         </script>
-        <?php
-        //     }
+    <?php
+    }
+    if ($pagenow == 'edit.php' && $typenow == 'mh_recordings') {
+    ?>
+        <script type="text/javascript">
+            document.addEventListener('DOMContentLoaded', function() {
 
-        //     // Check if we're on the single edit screen of your custom post type
-        //     if ($pagenow == 'post.php') {
-        //         $post_type = get_post_type();
-        //         if ($post_type == 'mh_meetings') {
-        //         
-        ?>
-        <!-- //             <script type="text/javascript">
-//                 jQuery(document).ready(function($) {
-//                     // Intercept the "Move to Trash" button click
-//                     $('#delete-action a').click(function(e) {
-//                         if (!confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
-//                             e.preventDefault();
-//                         } else {
-//                         }
-//                     });
-//                 });
-//             </script> -->
+                // Intercept delete link clicks
+                document.querySelectorAll('a.submitdelete, .bulkactions option[value="trash"]').forEach(function(element) {
+                    element.addEventListener('click', function(e) {
+                        if (!confirm('Are you sure you want to Delete this Meeting for Meet Hour Portal?')) {
+                            e.preventDefault();
+                            let url = element.closest('a').href;
+                            console.log("This is the Current URL: " + url);
+                            url = url + "&recording_delete=no"
+                            window.location.href = url;
+                            console.log("This is URL : " + url)
+                        } else {
+                            e.preventDefault();
+                            let url = element.closest('a').href;
+                            console.log("This is the Current URL: " + url);
+                            url = url + "&recording_delete=yes"
+                            window.location.href = url;
+                            console.log("This is URL : " + url);
+
+                        };
+                    });
+                });
+            });
+        </script>
 <?php
-        //         }
     }
 }
 add_action('admin_footer', 'add_delete_confirmation');

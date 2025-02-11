@@ -10,7 +10,7 @@ require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
 
 
 while (have_posts()) : the_post();
-
+    error_log("This is Post ID asdbasdmbamsd :" + get_the_ID());
     $meetHourApiService = new MHApiService();
     $token = get_option('meethour_access_token', '');
     $meeting_id = get_post_meta(get_the_ID(), 'meeting_id', true);

@@ -164,9 +164,10 @@ function meethour_update_recording()
     $body = new GetSingleRecording($recording_id);
     $response = $meetHourApiService->getSingleRecording($access_token, $body);
     if ($response->success == false) {
-        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
         return;
     }
+    settings_errors('meethour_messages');
     error_log("This is GetSingleMeeting" . json_encode($response));
 
     // $response = wp_remote_post('https://api.meethour.io/api/v1.2/customer/getsinglerecording', [
@@ -218,6 +219,7 @@ function meethour_fetch_recordings()
         wp_send_json_error('Access token not found');
         return;
     }
+
     $current_page = get_option('mh_recordings_current_page', 1);
     $total_pages = get_option('mh_recordings_total_pages', null);
 
@@ -225,14 +227,22 @@ function meethour_fetch_recordings()
         $current_page = 1;
         update_option('mh_recordings_current_page', $current_page);
     };
+
+    $posts_per_page = 20;
+    $start = ($current_page - 1) * $posts_per_page + 1;
+    $end = $current_page * $posts_per_page;
+    $post_limit = "{$start}-{$end}";
+    update_option('mh_recordings_post_limit', $post_limit);
+
     $main = new RecordingsList();
-    $main->limit = 20;
+    $main->limit = $posts_per_page;
     $main->page = $current_page;
     $response = $meetHourApiService->recordingsList($access_token, $main);
     if ($response->success == false) {
-        add_settings_error('Meetings', 401, esc_html($response->message), 'error');
+        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
         return;
     }
+    settings_errors('meethour_messages');
 
     if (is_null($total_pages)) {
         $total_pages = $response->total_pages;

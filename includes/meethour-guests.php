@@ -32,6 +32,8 @@ function wordpress_fetch_users()
 
 function meethour_fetch_users()
 {
+    settings_errors('meethour_Guests');
+
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
 
@@ -43,7 +45,7 @@ function meethour_fetch_users()
     $response = $meetHourApiService->ContactsList($access_token, $body);
 
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+        add_settings_error('meethour_Guests', 'meethour_success', esc_html($response->message), 'error');
     }
 
     $data = $response->contacts;
@@ -198,6 +200,8 @@ function meethour_delete_user_form($user, $userids)
 add_action('delete_user', 'delete_meethour_user');
 function delete_meethour_user($user_id)
 {
+    settings_errors('meethour_messages');
+
     $delete_meethour = isset($_POST['delete_meethour']) ? sanitize_text_field($_POST['delete_meethour']) : '';
 
     if ($delete_meethour === 'yes') {
@@ -220,6 +224,7 @@ function delete_meethour_user($user_id)
 
 function create_user_in_my_app($user_id)
 {
+    settings_errors('meethour_messages');
     error_log('create_user_in_my_app called' . $user_id);
     $meetHourApiService = new MHApiService();
     $user = get_userdata($user_id);

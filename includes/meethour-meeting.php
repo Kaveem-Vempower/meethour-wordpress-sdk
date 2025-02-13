@@ -10,6 +10,7 @@ use MeetHourApp\Types\ArchiveMeeting;
 use MeetHourApp\Types\DeleteMeeting;
 use MeetHourApp\Types\DeleteRecording;
 
+// Function creates an Custom Post Type with mh_meetings
 function meethour_register_meeting_post_type()
 {
     register_post_type('mh_meetings', [
@@ -29,6 +30,8 @@ function meethour_register_meeting_post_type()
 }
 add_action('init', 'meethour_register_meeting_post_type');
 add_filter('manage_mh_meetings_posts_columns', 'meethour_add_custom_columns');
+
+// Functions add Custom Columns in Custom Post Type
 function meethour_add_custom_columns($columns)
 {
     $columns = [
@@ -44,27 +47,48 @@ function meethour_add_custom_columns($columns)
     ];
     return $columns;
 }
+
+// This Function add Content to Custom Post Type. Title and Cb are Default cant change them 
 function meethour_custom_column_content($column, $post_id)
 {
+    $start_time = get_post_meta($post_id, 'meeting_date', true) . get_post_meta($post_id, 'meeting_time', true);
+    $current_datetime = date('M d, Y h:i A');
 
-    switch ($column) {
-        case 'meeting_id':
-            echo esc_html(get_post_meta($post_id, 'meeting_id', true));
-            break;
-        case 'date_time':
-            $start_time = get_post_meta($post_id, 'meeting_date', true) . get_post_meta($post_id, 'meeting_time', true);
-            echo esc_html(date('M d, Y h:i A', strtotime($start_time)));
-            break;
-        case 'duration':
-            echo esc_html(get_post_meta($post_id, 'duration_hr', true) . 'h' . " " . get_post_meta($post_id, 'duration_min', true) . 'm');
-            break;
-        case 'agenda':
-            $post = get_post($post_id);
-            echo esc_html($post->post_content);
-            break;
-        case 'shortcode':
-            echo '<button class="button button-small copy-shortcode" data-shortcode="[meethour meeting_id=' . get_post_meta($post_id, 'meeting_id', true) . ']">Copy Shortcode</button>';
-            echo '<script>
+    error_log("This current Date Time" . strtotime($current_datetime) . "For Post ID : " . $post_id);
+    error_log("This is Start Time" . strtotime($start_time) . "For Post ID : " . $post_id);
+    if (strtotime($start_time) < strtotime($current_datetime)) {
+        $my_post = array(
+            'ID'           => $post_id,
+            'post_status'   => 'missed',
+        );
+    } elseif (strtotime($start_time) > strtotime($current_datetime)) {
+        $my_post = array(
+            'ID'           => $post_id,
+            'post_status'   => 'upcoming',
+        );
+    }
+    wp_update_post($my_post);
+
+
+    if (!empty(get_post_meta($post_id, 'meeting_id', true))) {
+        switch ($column) {
+            case 'meeting_id':
+                echo esc_html(get_post_meta($post_id, 'meeting_id', true));
+                break;
+            case 'date_time':
+                $start_time = get_post_meta($post_id, 'meeting_date', true) . get_post_meta($post_id, 'meeting_time', true);
+                echo esc_html(date('M d, Y h:i A', strtotime($start_time)));
+                break;
+            case 'duration':
+                echo esc_html(get_post_meta($post_id, 'duration_hr', true) . 'h' . " " . get_post_meta($post_id, 'duration_min', true) . 'm');
+                break;
+            case 'agenda':
+                $post = get_post($post_id);
+                echo esc_html($post->post_content);
+                break;
+            case 'shortcode':
+                echo '<button class="button button-small copy-shortcode" data-shortcode="[meethour meeting_id=' . get_post_meta($post_id, 'meeting_id', true) . ']">Copy Shortcode</button>';
+                echo '<script>
             jQuery(document).ready(function($) {
                 $(".copy-shortcode").click(function() {
                     var shortcode = $(this).data("shortcode");
@@ -78,21 +102,78 @@ function meethour_custom_column_content($column, $post_id)
                 });
             });
             </script>';
-            break;
-        case 'meeting_link':
-            echo '<a href="' . get_permalink($post_id) . '" target="_blank">Join Meeting</a>';
-            break;
-        case 'meethour_link':
-            $meeting_link = get_post_meta($post_id, 'join_url', true);
-            if (empty($meeting_link)) {
+                break;
+            case 'meeting_link':
                 echo '<a href="' . get_permalink($post_id) . '" target="_blank">Join Meeting</a>';
-            } else {
-                echo '<a href="' . ($meeting_link) . '" target="_blank">Join Meeting 🔗</a>';
-            }
-            break;
+                break;
+            case 'meethour_link':
+                $meeting_link = get_post_meta($post_id, 'join_url', true);
+                if (empty($meeting_link)) {
+                    echo '<a href="' . get_permalink($post_id) . '" target="_blank">Join Meeting</a>';
+                } else {
+                    echo '<a href="' . ($meeting_link) . '" target="_blank">Join Meeting 🔗</a>';
+                }
+                break;
+        }
     }
 }
+
+// Hook into pre_get_posts to modify the admin query
+add_action('pre_get_posts', 'meethour_exclude_past_meetings');
+
+function meethour_exclude_past_meetings($query)
+{
+    // Check if we're in the admin area, main query, and our custom post type
+    if (is_admin() && $query->is_main_query() && $query->get('post_type') === 'mh_meetings') {
+
+        // Get the current date and time
+        $current_datetime = current_time('Y-m-d H:i:s');
+
+        // Build a meta query to include only posts with a non-empty meeting_id and future date/time
+        $meta_query = [
+            [
+                'key'     => 'meeting_id',
+                'value'   => '',
+                'compare' => '!=',
+            ],
+            [
+                'key'     => 'meeting_id',
+                'compare' => 'EXISTS',
+            ],
+            [
+                'relation' => 'OR',
+                [
+                    'key'     => 'meeting_date',
+                    'value'   => $current_datetime,
+                    'compare' => '>=',
+                    'type'    => 'DATETIME',
+                ],
+                [
+                    'relation' => 'AND',
+                    [
+                        'key'     => 'meeting_date',
+                        'value'   => date('Y-m-d', strtotime($current_datetime)),
+                        'compare' => '>=',
+                        'type'    => 'DATE',
+                    ],
+                    [
+                        'key'     => 'meeting_time',
+                        'value'   => date('H:i:s', strtotime($current_datetime)),
+                        'compare' => '>=',
+                        'type'    => 'TIME',
+                    ],
+                ],
+            ],
+        ];
+
+        // Set the meta query
+        $query->set('meta_query', $meta_query);
+    }
+}
+
+
 add_filter('manage_edit-mh_meetings_sortable_columns', 'meethour_sortable_columns');
+// This Function is Used to Sort the Colums page
 function meethour_sortable_columns($columns)
 {
     $columns['meeting_id'] = 'meeting_id';
@@ -353,8 +434,140 @@ function meethour_display_error_message_meeting()
         <div class="notice notice-error">
             <p><?php echo esc_html($error_message); ?></p>
         </div>
-<?php
+    <?php
         delete_transient('meethour_error_message');
     }
 }
 add_action('admin_notices', 'meethour_display_error_message_meeting');
+
+// Register custom post statuses
+function mh_meetings_register_post_statuses()
+{
+    $statuses = array(
+        'upcoming' => 'Upcoming',
+        'missed'   => 'Missed',
+    );
+
+    foreach ($statuses as $status => $label) {
+        register_post_status($status, array(
+            'label'                     => _x($label, 'post status label', 'textdomain'),
+            'public'                    => true,
+            'show_in_admin_all_list'    => true,
+            'show_in_admin_status_list' => true,
+            'exclude_from_search'       => false,
+            'label_count'               => _n_noop(
+                "$label <span class='count'>(%s)</span>",
+                "$label <span class='count'>(%s)</span>",
+                'textdomain'
+            ),
+        ));
+    }
+}
+add_action('init', 'mh_meetings_register_post_statuses');
+
+function mh_meetings_update_post_type_args($args, $post_type)
+{
+    if ('mh_meetings' === $post_type) {
+        $args['capability_type'] = 'post';
+        $args['capabilities']    = array();
+        $args['map_meta_cap']    = true;
+    }
+    return $args;
+}
+add_filter('register_post_type_args', 'mh_meetings_update_post_type_args', 10, 2);
+
+function mh_meetings_post_status_filter()
+{
+    global $post_type, $post_status;
+
+    if ('mh_meetings' === $post_type) {
+        $statuses = array(
+            'all'      => __('All statuses', 'textdomain'),
+            'publish'  => __('Published', 'textdomain'),
+            'upcoming' => __('Upcoming', 'textdomain'),
+            'missed'   => __('Missed', 'textdomain'),
+            'trash'    => __('Trash', 'textdomain'),
+        );
+    ?>
+        <select name="post_status">
+            <?php foreach ($statuses as $status => $label) : ?>
+                <option value="<?php echo esc_attr($status); ?>" <?php selected($post_status, $status); ?>>
+                    <?php echo esc_html($label); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    <?php
+    }
+}
+add_action('restrict_manage_posts', 'mh_meetings_post_status_filter');
+
+function mh_meetings_include_custom_statuses($query)
+{
+    global $post_type, $pagenow;
+
+    if (is_admin() && 'edit.php' === $pagenow && 'mh_meetings' === $post_type && !isset($_GET['post_status'])) {
+        $query->set('post_status', array('publish', 'upcoming', 'missed'));
+    }
+}
+add_action('pre_get_posts', 'mh_meetings_include_custom_statuses');
+
+function mh_meetings_append_post_status_list()
+{
+    global $post;
+    if ('mh_meetings' !== get_post_type($post)) {
+        return;
+    }
+    ?>
+    <script>
+        jQuery(document).ready(function($) {
+            var select = $('#post_status');
+            var statuses = {
+                'upcoming': '<?php echo esc_js(__('Upcoming', 'textdomain')); ?>',
+                'missed': '<?php echo esc_js(__('Missed', 'textdomain')); ?>'
+            };
+
+            $.each(statuses, function(value, text) {
+                select.append($('<option>').val(value).text(text));
+            });
+
+            // Set the selected status
+            $('#post_status option[value="<?php echo $post->post_status; ?>"]').attr('selected', 'selected');
+        });
+    </script>
+<?php
+}
+add_action('post_submitbox_misc_actions', 'mh_meetings_append_post_status_list');
+
+function mh_meetings_quick_edit_custom_status($column_name, $post_type)
+{
+    if ('mh_meetings' !== $post_type) {
+        return;
+    }
+?>
+    <script>
+        jQuery(document).ready(function($) {
+            $(document).on('click', '.editinline', function() {
+                var post_id = $(this).closest('tr').attr('id').replace('post-', '');
+                var status = $('#inline_' + post_id + ' .post_status').text();
+
+                // Add custom statuses to the Quick Edit dropdown
+                var select = $('select[name="_status"]');
+                var statuses = {
+                    'upcoming': '<?php echo esc_js(__('Upcoming', 'textdomain')); ?>',
+                    'missed': '<?php echo esc_js(__('Missed', 'textdomain')); ?>'
+                };
+
+                $.each(statuses, function(value, text) {
+                    if (select.find('option[value="' + value + '"]').length === 0) {
+                        select.append($('<option>').val(value).text(text));
+                    }
+                });
+
+                // Set the selected status
+                select.val(status);
+            });
+        });
+    </script>
+<?php
+}
+add_action('quick_edit_custom_box', 'mh_meetings_quick_edit_custom_status', 10, 2);

@@ -8,6 +8,8 @@ use MeetHourApp\Types\ContactsList;
 use MeetHourApp\Types\DeleteContact;
 use MeetHourApp\Types\AddContact;
 
+
+// Fetches all Wordpress users with thier metadata
 function wordpress_fetch_users()
 {
     $members = get_users(
@@ -29,6 +31,8 @@ function wordpress_fetch_users()
     return $user_data;
 }
 
+
+// Fetches all users from the MeetHour platform.
 function meethour_fetch_users()
 {
 
@@ -46,7 +50,7 @@ function meethour_fetch_users()
         set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
         return;
     }
-
+    // Adds the Response data into the database
     $data = $response->contacts;
     foreach ($data as $contact) {
         $username = $contact->first_name . $contact->last_name;
@@ -82,11 +86,13 @@ function meethour_fetch_users()
     return $data ?? [];
 }
 
+// checks if access token is generated or not if not generated then i wont show the fetch contact button
 $access_token = get_option('meethour_access_token', '');
 if (!empty($access_token)) {
     add_action('admin_head', 'add_fetch_contacts_button');
 }
 
+// This Function adds "Fetch Meet Hour Contacts Button" using jquery
 function add_fetch_contacts_button()
 {
 
@@ -151,13 +157,15 @@ function add_fetch_contacts_button()
     </script>
     <?php
 }
-// }
 add_action('wp_ajax_meethour_fetch_contacts', 'meethour_fetch_users');
 
+// checks if access token is generated or not if not generated then wont show delete option for meethour users role
 $access_token = get_option('meethour_access_token', '');
 if (!empty($access_token)) {
     add_action('delete_user_form', 'meethour_delete_user_form', 10, 2);
 }
+
+// This Function is use to show a validation form before deleting the user from meet hour
 function meethour_delete_user_form($user, $userids)
 {
     if (!empty($userids)) {
@@ -191,6 +199,7 @@ function meethour_delete_user_form($user, $userids)
     }
 }
 
+// This Function is called when User Delete Form Validation is True
 add_action('delete_user', 'delete_meethour_user');
 function delete_meethour_user($user_id)
 {
@@ -212,7 +221,7 @@ function delete_meethour_user($user_id)
     }
 }
 
-
+// When user is created in wordpress this functions helps to create user in meethour portal and adds its contact id in backend with meethour_contact_id
 function create_user_in_my_app($user_id)
 {
     settings_errors('meethour_messages');
@@ -240,6 +249,7 @@ function create_user_in_my_app($user_id)
     }
 }
 
+// This will show a Error Message if there is any error in api response
 add_action('user_register', 'create_user_in_my_app', 10, 1);
 function meethour_display_error_message_guests()
 {

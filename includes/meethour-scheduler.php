@@ -455,6 +455,8 @@ function meethour_save_meeting_details($post_id)
             }
         }
     }
+
+    // Update the post into the database
     settings_errors('meethour_messages');
 }
 
@@ -472,7 +474,7 @@ function custom_js_to_head()
 ?>
     <script>
         jQuery(function($) {
-            $("body.post-type-mh_meetings .wrap h1").append('<button href="#" id="sync-meetings" style="margin-left:10px" class="page-title-action my-btn">Sync Upcomming Meetings from Meet Hour <strong>( <?php echo $page_limit_meetings ?> )</strong></button>');
+            $("body.post-type-mh_meetings .wrap h1").append('<button href="#" id="sync-meetings" style="margin-left:10px" class="page-title-action my-btn">Sync Upcoming Meetings from Meet Hour <strong>( <?php echo $page_limit_meetings ?> )</strong></button>');
 
             $.fn.buttonLoader = function(action) {
                 var self = $(this);

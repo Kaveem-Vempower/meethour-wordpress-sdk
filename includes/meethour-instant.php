@@ -6,6 +6,7 @@ require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
 use MeetHourApp\Services\MHApiService;
 use MeetHourApp\Types\ScheduleMeeting;
 
+// Function to Call SDK Request for Instant Page Creation
 function meethour_Instant_page()
 {
     // Get access token

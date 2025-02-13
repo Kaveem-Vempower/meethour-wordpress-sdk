@@ -230,7 +230,7 @@ function Archive_Meethour_Post($post_id)
     }
 }
 
-
+// add action
 add_action('before_delete_post', 'Delete_Meethour_Post');
 function Delete_Meethour_Post($post_id)
 {

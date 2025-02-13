@@ -16,7 +16,6 @@ function meethour_token_page()
             wp_die('Security check failed');
         }
 
-        // Get and sanitize form data
         $client_id = sanitize_text_field($_POST['client_id']);
         $client_secret = sanitize_text_field($_POST['client_secret']);
         $api_key = sanitize_text_field($_POST['api_key']);
@@ -26,8 +25,6 @@ function meethour_token_page()
         $grant_type = "password";
         $main_user = sanitize_text_field($_POST['main_user']);
         update_option('meethour_main_user', $main_user);
-
-
 
         $body = new Login($client_id, $client_secret, $grant_type, $username, $password);
         $response = $meetHourApiService->login($body);
@@ -46,6 +43,7 @@ function meethour_token_page()
                 'Access token generated and stored successfully!',
                 'success'
             );
+            echo '<script type="text/javascript">window.location.reload()</script>';
         } else {
             add_settings_error(
                 'meethour_messages',
@@ -91,8 +89,8 @@ function meethour_token_page()
                         <th><label for="main_user">Owner</label></th>
                         <td> <select name="main_user" id="main_user" class="select2-select req" style="width: 100%;">
                                 <?php foreach ($wordpress_user_data as $user) { ?>
-                                    <option value='<?php echo htmlspecialchars($user->id); ?>'>
-                                        <?php echo htmlspecialchars($user->user_email); ?>
+                                    <option value='<?php echo ($user->id); ?>'>
+                                        <?php echo ($user->user_email); ?>
                                     </option>
                                 <?php } ?>
                             </select>

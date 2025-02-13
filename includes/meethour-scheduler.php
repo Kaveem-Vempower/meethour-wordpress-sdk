@@ -12,10 +12,8 @@ function fetch_timeZone()
     $meetHourApiService = new MHApiService();
     $response = $meetHourApiService->timezone($access_token);
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
-        return;
+        set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
     }
-    settings_errors('meethour_messages');
     return $response->timezones;
 };
 
@@ -43,7 +41,6 @@ function meethour_render_meeting_details_meta_box($post)
     $attendes_response = json_decode(get_post_meta($post_id, 'attendes', true));
     if (!empty($attendes_response)) {
         $selected_attendes_emails = array_column($attendes_response, 'email');
-        error_log("These are Selected Attendes Emails: " . json_encode($selected_attendes_emails));
     }
     wp_nonce_field('meethour_save_meeting_details', 'meethour_meeting_details_nonce');
 ?>
@@ -249,7 +246,7 @@ function meethour_render_meeting_details_meta_box($post)
         function selectedHosts() {
             var dnd = document.getElementById('attendes');
             const mod_element = document.getElementById('Moderator');
-            mod_element.innerHTML = ''; // Clear previous moderators
+            mod_element.innerHTML = '';
             var selected = dnd.selectedOptions;
             selectedArr = (Array.from(selected).map(option => JSON.parse(option.value)));
             console.log(selectedArr);
@@ -327,7 +324,7 @@ function meethour_render_meeting_details_meta_box($post)
                 mod_element.appendChild(lineBreak);
             });
         }
-        // Function to fetch options and update checkboxes
+
         function fetchAndUpdateCheckboxes() {
             APIoptions = document.getElementById('api-options');
             var optionsString = APIoptions.innerText;
@@ -348,7 +345,6 @@ function meethour_render_meeting_details_meta_box($post)
             });
         }
 
-        // Call the function when needed
         fetchAndUpdateCheckboxes();
     </script>
 <?php
@@ -389,6 +385,9 @@ function meethour_save_meeting_details($post_id)
         update_post_meta($post_id, 'attendes', $jsonAttendes);
         update_post_meta($post_id, 'hosts', $jsonHostUsers);
         $meetingName = sanitize_text_field($_POST['meeting_name'] ?? '');
+        if (empty($meetingName)) {
+            $meetingName = get_the_title($post_id);
+        }
         $meeting_agenda = sanitize_text_field($_POST['meeting_description'] ?? '');
         $passcode = sanitize_text_field($_POST['meeting_passcode'] ?? '');
         $meetingDate = sanitize_text_field($_POST['meeting_date'] ?? '');
@@ -403,13 +402,12 @@ function meethour_save_meeting_details($post_id)
         $instructions = ($_POST['comment']);
 
         if ($post_meeting_id == NULL) {
-            // Schedule Meeting API
-            error_log("Calling schedule meeting API");
             $scheduleBody = new ScheduleMeeting($meetingName, $passcode, $meetingTime, $meetingMeridiem, $meetingDate, $timezone);
             $scheduleBody->attend = $mainAttendes;
             $scheduleBody->hostusers = $mainHostUsers;
             $scheduleBody->options = $options;
             $scheduleBody->is_show_portal = 1;
+            $scheduleBody->send_calendar_invite = 1;
             $scheduleBody->default_recording_storage = $default_recording_storage;
             $scheduleBody->agenda = $meeting_agenda;
             $scheduleBody->duration_hr = $duration_hr;
@@ -421,17 +419,14 @@ function meethour_save_meeting_details($post_id)
             );
             $meeting_id = $scheduleresponse->data->meeting_id;
             update_post_meta($post_id, 'meeting_id', $meeting_id);
-            update_post_meta($post_id, 'join_url', $scheduleresponse->data->join_url);
+            update_post_meta($post_id, 'join_url', $scheduleresponse->data->joinURL);
+            update_post_meta($post_id, 'attendes', json_encode($scheduleresponse->data->meeting_attendees));
 
             if ($scheduleresponse->success == false) {
-                add_settings_error('meethour_messages', 401, esc_html($scheduleresponse->message), 'error');
-            }
-            if ($scheduleresponse->success == true) {
-                add_settings_error('meethour_messages', 401, esc_html($scheduleresponse->message), 'success');
+                set_transient('meethour_error_message', $scheduleresponse->message, 30); // store the error message for 30 seconds
             }
         } else {
             //Updated Meeting API
-            error_log("Calling Edit meeting API");
             $updateBody = new EditMeeting($post_meeting_id);
             $updateBody->meeting_time = $meetingTime;
             $updateBody->meeting_meridiem = $meetingMeridiem;
@@ -453,12 +448,10 @@ function meethour_save_meeting_details($post_id)
                 $updateBody
             );
             update_post_meta($post_id, 'meeting_id', $editresponse->data->meeting_id);
-            update_post_meta($post_id, 'join_url', $editresponse->data->join_url);
-            if ($scheduleresponse->success == false) {
-                add_settings_error('meethour_messages', 401, esc_html($editresponse->message), 'error');
-            }
-            if ($scheduleresponse->success == true) {
-                add_settings_error('meethour_messages', 401, esc_html($editresponse->message), 'success');
+            update_post_meta($post_id, 'join_url', $editresponse->data->joinURL);
+            update_post_meta($post_id, 'attendes', json_encode($editresponse->data->meeting_attendees));
+            if ($editresponse->success == false) {
+                set_transient('meethour_error_message', $editresponse->message, 30); // store the error message for 30 seconds
             }
         }
     }
@@ -527,9 +520,7 @@ function custom_js_to_head()
                     }
                 });
             });
-
             $("body.post-type-mh_recordings .wrap h1").append('<a href="#" id="sync-recordings"  style="margin-left:10px" class="page-title-action my-btn">Fetch Recordings from Meet Hour <strong>( <?php echo $page_limit_recordings ?> )</strong></a>');
-
             $("#sync-recordings").on("click", function(event) {
                 event.preventDefault();
                 $('.my-btn').buttonLoader('start');
@@ -597,7 +588,7 @@ function custom_js_to_head()
     </script>
 
 
-<?php
+    <?php
 }
 add_action('admin_head', 'custom_js_to_head');
 
@@ -609,33 +600,46 @@ function enqueue_my_script()
 }
 add_action('admin_enqueue_scripts', 'enqueue_my_script');
 
+
+
 function add_custom_post_type_template($single_template)
 {
     global $post;
 
-    // Check if $post is set
-    if (isset($post)) {
-        // Debugging output
-        error_log('Post type: ' . $post->post_type);
-
-        if ($post->post_type == 'mh_meetings') {
-            $new_template = get_stylesheet_directory() . '/single-mh_meetings.php';
-            error_log('Using template: ' . $new_template);
-            return $new_template;
-        }
-
-        if ($post->post_type == 'mh_recordings') {
-            $new_template = get_stylesheet_directory() . '/single-mh_recordings.php';
-            error_log('Using template: ' . $new_template);
-            return $new_template;
-        }
-    } else {
-        error_log('Global $post is not set.');
+    if ($post->post_type == 'mh_meetings') {
+        $single_template = dirname(__FILE__) . '/single-mh_meetings.php';
     }
-
+    if ($post->post_type == 'mh_recordings') {
+        $single_template = dirname(__FILE__) . '/single-mh_recordings.php';
+    }
     return $single_template;
 }
 
 add_filter('single_template', 'add_custom_post_type_template');
 
-?>
+
+function meethour_display_error_message()
+{
+    $error_message = get_transient('meethour_error_message');
+    if ($error_message) {
+    ?>
+        <div class="notice notice-error">
+            <p><?php echo esc_html($error_message); ?></p>
+        </div>
+<?php
+        delete_transient('meethour_error_message'); // delete the transient
+    }
+}
+add_action('admin_notices', 'meethour_display_error_message');
+
+
+add_filter('redirect_post_location', 'Custom_post_Redirection');
+function Custom_post_Redirection($location)
+{
+
+    if ('mh_meetings' == get_post_type()) {
+        if (isset($_POST['save']) || isset($_POST['publish']))
+            return admin_url("edit.php?post_type=mh_meetings");
+    }
+    return $location;
+}

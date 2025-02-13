@@ -10,7 +10,6 @@ require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
 
 
 while (have_posts()) : the_post();
-    error_log("This is Post ID asdbasdmbamsd :" + get_the_ID());
     $meetHourApiService = new MHApiService();
     $token = get_option('meethour_access_token', '');
     $meeting_id = get_post_meta(get_the_ID(), 'meeting_id', true);
@@ -26,7 +25,7 @@ while (have_posts()) : the_post();
     $attendes = get_post_meta(get_the_ID(), 'attendes', true);
     $attendes_ids = [];
     foreach ($attendes as $attendes) {
-        $attendes_ids[] = $attendes->id;
+        $attendes_ids[] = $attendes->contact_id;
     }
 
     $body = new GenerateJwt($meeting_id);
@@ -59,7 +58,7 @@ while (have_posts()) : the_post();
         <body>
             <div id="conference" style="height: 100vh;"></div>
             <script>
-                var domain = " meethour.io";
+                var domain = "meethour.io";
                 var options = {
                     roomName: "<?php echo esc_html($meeting_id); ?>",
                     width: "100%",

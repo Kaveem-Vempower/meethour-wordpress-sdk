@@ -18,7 +18,7 @@ function meethour_register_recordings_post_type()
         ],
         'public' => true,
         'has_archive' => true,
-        'supports' => ['title', 'editor'], // added to show the custom fields in the menu 
+        'supports' => ['title', 'editor'],
         'show_in_menu' => false,
     ]);
 }
@@ -91,7 +91,6 @@ function meethour_recordings_custom_columns($column, $post_id)
         case 'RefreshShortcode':
             $recording_id = get_post_meta($post_id, 'recording_id', true);
             $recording_expiry = get_post_meta($post_id, 'recording_expiry', true);
-            error_log('This is the recording expiry Kaveem: ' . $recording_expiry);
             echo '<div id="countdown-' . $recording_id . '"></div>';
             echo '<button id="refreshButton-' . $recording_id . '" style="display:none;" onclick="meethour_update_recording(' . $recording_id . ')">Refresh video link</button>';
             echo '<script>
@@ -151,9 +150,8 @@ function meethour_recordings_custom_columns($column, $post_id)
     }
 }
 
-function meethour_update_recording()
+function meethour_update_recording($recording_id)
 {
-    $recording_id = "33231";
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
 
@@ -164,25 +162,8 @@ function meethour_update_recording()
     $body = new GetSingleRecording($recording_id);
     $response = $meetHourApiService->getSingleRecording($access_token, $body);
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
+        set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
         return;
-    }
-    settings_errors('meethour_messages');
-    error_log("This is GetSingleMeeting" . json_encode($response));
-
-    // $response = wp_remote_post('https://api.meethour.io/api/v1.2/customer/getsinglerecording', [
-    //     'headers' => [
-    //         'Authorization' => 'Bearer ' . $access_token,
-    //         'Content-Type' => 'application/json',
-    //         'Accept' => 'application/json'
-    //     ],
-    //     'body' => json_encode([
-    //         'recording_id' => $recording_id
-    //     ])
-    // ]);
-
-    if (is_wp_error($response)) {
-        return $response;
     }
 
     $body = wp_remote_retrieve_body($response);
@@ -215,7 +196,6 @@ function meethour_fetch_recordings()
     $access_token = get_option('meethour_access_token', '');
 
     if (empty($access_token)) {
-        error_log('Access token not found');
         wp_send_json_error('Access token not found');
         return;
     }
@@ -239,10 +219,9 @@ function meethour_fetch_recordings()
     $main->page = $current_page;
     $response = $meetHourApiService->recordingsList($access_token, $main);
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
+        set_transient('meethour_error_message', $response->message, 30);
         return;
     }
-    settings_errors('meethour_messages');
 
     if (is_null($total_pages)) {
         $total_pages = $response->total_pages;
@@ -290,7 +269,6 @@ function meethour_fetch_recordings()
     if ($current_page < $total_pages) {
         $current_page++;
         update_option('mh_recordings_current_page', $current_page);
-        error_log("These is the Current Page No. #268 : " . $current_page);
     } else {
         delete_option('mh_recordings_current_page');
         delete_option('mh_recordings_total_pages');
@@ -311,7 +289,26 @@ function meethour_hide_add_new_post_button()
                 #sync-recordings{
                     margin-left:20px;
                 }
+                a.row-title{
+                    pointer-events: none;
+                    cursor: default;
+                }
         </style>';
     }
 }
 add_action('admin_head', 'meethour_hide_add_new_post_button');
+
+
+function meethour_display_error_message_recording()
+{
+    $error_message = get_transient('meethour_error_message');
+    if ($error_message) {
+?>
+        <div class="notice notice-error">
+            <p><?php echo esc_html($error_message); ?></p>
+        </div>
+<?php
+        delete_transient('meethour_error_message'); // delete the transient
+    }
+}
+add_action('admin_notices', 'meethour_display_error_message_recording');

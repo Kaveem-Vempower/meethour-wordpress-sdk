@@ -23,6 +23,7 @@ function meethour_register_meeting_post_type()
         'has_archive' => true,
         'supports' => ['title', 'editor'],
         'show_in_menu' => false,
+        'position'
 
     ]);
 }
@@ -45,6 +46,7 @@ function meethour_add_custom_columns($columns)
 }
 function meethour_custom_column_content($column, $post_id)
 {
+
     switch ($column) {
         case 'meeting_id':
             echo esc_html(get_post_meta($post_id, 'meeting_id', true));
@@ -54,7 +56,7 @@ function meethour_custom_column_content($column, $post_id)
             echo esc_html(date('M d, Y h:i A', strtotime($start_time)));
             break;
         case 'duration':
-            echo esc_html(get_post_meta($post_id, 'duration_hr', true) . get_post_meta($post_id, 'duration_min', true) . 'm');
+            echo esc_html(get_post_meta($post_id, 'duration_hr', true) . 'h' . " " . get_post_meta($post_id, 'duration_min', true) . 'm');
             break;
         case 'agenda':
             $post = get_post($post_id);
@@ -82,7 +84,11 @@ function meethour_custom_column_content($column, $post_id)
             break;
         case 'meethour_link':
             $meeting_link = get_post_meta($post_id, 'join_url', true);
-            echo '<a href="' . ($meeting_link) . '" target="_blank">Join Meeting 🔗</a>';
+            if (empty($meeting_link)) {
+                echo '<a href="' . get_permalink($post_id) . '" target="_blank">Join Meeting</a>';
+            } else {
+                echo '<a href="' . ($meeting_link) . '" target="_blank">Join Meeting 🔗</a>';
+            }
             break;
     }
 }
@@ -120,12 +126,6 @@ function meethour_fetch_upcoming_meetings()
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
 
-    if (empty($access_token)) {
-        error_log('Access token not found');
-        wp_send_json_error('Access token not found');
-        return;
-    }
-
 
     $current_page = get_option('mh_meetings_current_page', 1);
     $total_pages = get_option('mh_meetings_total_pages', null);
@@ -147,19 +147,14 @@ function meethour_fetch_upcoming_meetings()
     $response = $meetHourApiService->upcomingMeetings($access_token, $body);
 
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+        set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
         return;
     }
-
-    settings_errors('meethour_messages');
-
 
     if (is_null($total_pages)) {
         $total_pages = $response->total_pages;
         update_option('mh_meetings_total_pages', $total_pages);
     }
-    error_log("These is the Current Page No. #257 : " . $current_page);
-    error_log("These is the Total Pages No. #258 : " . $total_pages);
     $meetings_array = json_decode(json_encode($response->meetings), true);
     foreach ($meetings_array as $meet) {
         $existing_posts = get_posts([
@@ -172,7 +167,7 @@ function meethour_fetch_upcoming_meetings()
         if (empty($existing_posts)) {
             wp_insert_post([
                 'post_title'   => $meet['topic'],
-                'post_content' => '[meethour id=' . $meet['meeting_id'] . ']',
+                'post_content' => $meet['agenda'],
                 'post_type'    => 'mh_meetings',
                 'post_status'  => 'publish',
                 'meta_input'   => [
@@ -198,7 +193,6 @@ function meethour_fetch_upcoming_meetings()
     if ($current_page < $total_pages) {
         $current_page++;
         update_option('mh_meetings_current_page', $current_page);
-        error_log("These is the Current Page No. #268 : " . $current_page);
     } else {
         delete_option('mh_meetings_current_page');
         delete_option('mh_meetings_total_pages');
@@ -207,29 +201,19 @@ function meethour_fetch_upcoming_meetings()
     return $response;
 }
 
-
-
 add_action('wp_ajax_meethour_fetch_upcoming_meetings', 'meethour_fetch_upcoming_meetings');
 add_action('wp_ajax_nopriv_meethour_fetch_upcoming_meetings', 'meethour_fetch_upcoming_meetings');
-
-
 
 
 add_action('wp_trash_post', 'Archive_Meethour_Post', 1, 1);
 function Archive_Meethour_Post($post_id)
 {
-
     $currentPageUrl = 'http://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
-
-    error_log("This is the Current URL : " . $currentPageUrl);
-
     $parsed_url = parse_url($currentPageUrl);
     $query = $parsed_url['query'];
     parse_str($query, $params);
     $meeting_archive = $params['meeting_trash'];
-    error_log("This is the Meeting Archive : " . $meeting_archive);
-    if ($meeting_archive === 'yes') {
-        error_log("Meeting Archived from Meethour Portal SUccessfully");
+    if ($meeting_archive == 'yes') {
         $meetHourApiService = new MHApiService();
         $post = get_post($post_id);
         $post_type = $post->post_type;
@@ -239,13 +223,10 @@ function Archive_Meethour_Post($post_id)
             $body = new ArchiveMeeting($meeting_id);
             $response = $meetHourApiService->archiveMeeting($token, $body);
             if ($response->success == false) {
-                add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
+                set_transient('meethour_error_message', $response->message, 30);
                 return;
-            } else {
-                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
             }
         }
-        settings_errors('meethour_messages');
     }
 }
 
@@ -254,44 +235,35 @@ add_action('before_delete_post', 'Delete_Meethour_Post');
 function Delete_Meethour_Post($post_id)
 {
 
-    $currentPageUrl = 'http://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
+    $currentPageUrl = 'https://' . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
     $parsed_url = parse_url($currentPageUrl);
     $query = $parsed_url['query'];
     parse_str($query, $params);
     $meeting_delete = $params['meeting_delete'];
     $recording_delete = $params['recording_delete'];
-    error_log("This is the Meeting Delete : " . $meeting_delete);
 
     $meetHourApiService = new MHApiService();
     $post = get_post($post_id);
     $post_type = $post->post_type;
     $token = get_option('meethour_access_token', '');
-    error_log("This is delete Meethour Posts" . $post_id);
     $meeting_id = get_post_meta($post_id, 'meeting_id', true);
-    error_log('Meeting ID : ' . $meeting_id);
 
-    if ($meeting_delete === 'yes') {
+    if ($meeting_delete == 'yes') {
         if ($post_type == 'mh_meetings') {
             echo '<script>alert("This is mh_meeting Post Type");</script>';
-            error_log('This is mh_meeting Post Type');
-            $body = new DeleteMeeting($meeting_id); //change to delete meeting type 
+            $body = new DeleteMeeting($meeting_id);
             $meeting_response = $meetHourApiService->deleteMeeting($token, $body);
             if ($meeting_response->success == false) {
-                add_settings_error('Meetings', 401, esc_html($meeting_response->message), 'error');
-                settings_errors();
+                set_transient('meethour_error_message', $meeting_response->message, 30);
             }
-            error_log('Delete Meeting Response : ' . json_encode($meeting_response));
         }
     }
-    if ($recording_delete === 'yes') {
+    if ($recording_delete == 'yes') {
         if ($post_type == 'mh_recordings') {
             $recording_id = get_post_meta($post_id, 'recording_id', true);
             $main = new DeleteRecording($recording_id);
             $response = $meetHourApiService->deleteRecording($token, $main);
-            if ($response->success == false) {
-                add_settings_error('meethour_messages', 401, esc_html($response->message), 'error');
-            }
-            settings_errors('meethour_messages');
+            set_transient('meethour_error_message', $response->message, 30);
         }
     }
 }
@@ -299,13 +271,10 @@ function Delete_Meethour_Post($post_id)
 function add_delete_confirmation()
 {
     global $pagenow,  $typenow;
-    // Check if we're on the edit screen of your custom post type
     if ($pagenow == 'edit.php' && $typenow == 'mh_meetings') {
 ?>
         <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function() {
-
-                // Intercept delete link clicks
                 document.querySelectorAll('a.submitdelete, .bulkactions option[value="trash"]').forEach(function(element) {
                     element.addEventListener('click', function(e) {
                         const queryString = element.closest('a').href;
@@ -313,7 +282,7 @@ function add_delete_confirmation()
                         const action = urlParams.get('action');
 
                         if (action == 'trash') {
-                            if (!confirm('Are you sure you want to Trash this Meeting for Meet Hour Portal?')) {
+                            if (!confirm('Are you sure you want to Trash this Meeting from Meet Hour Portal as well ?')) {
                                 e.preventDefault();
                                 let url = element.closest('a').href;
                                 console.log("This is the Current URL: " + url);
@@ -331,20 +300,16 @@ function add_delete_confirmation()
                         }
 
                         if (action == 'delete') {
-                            if (!confirm('Are you sure you want to Delete this Meeting for Meet Hour Portal?')) {
+                            if (!confirm('Are you sure you want to Delete this Meeting from Meet Hour Portal as well ?')) {
                                 e.preventDefault();
                                 let url = element.closest('a').href;
-                                console.log("This is the Current URL: " + url);
                                 url = url + "&meeting_delete=no"
                                 window.location.href = url;
-                                console.log("This is URL : " + url)
                             } else {
                                 e.preventDefault();
                                 let url = element.closest('a').href;
-                                console.log("This is the Current URL: " + url);
                                 url = url + "&meeting_delete=yes"
                                 window.location.href = url;
-                                console.log("This is URL : " + url);
                             }
                         };
                     });
@@ -357,31 +322,39 @@ function add_delete_confirmation()
     ?>
         <script type="text/javascript">
             document.addEventListener('DOMContentLoaded', function() {
-
-                // Intercept delete link clicks
                 document.querySelectorAll('a.submitdelete, .bulkactions option[value="trash"]').forEach(function(element) {
                     element.addEventListener('click', function(e) {
-                        if (!confirm('Are you sure you want to Delete this Meeting for Meet Hour Portal?')) {
+                        if (!confirm('Are you sure you want to Delete this Meeting from Meet Hour Portal as well ?')) {
                             e.preventDefault();
                             let url = element.closest('a').href;
-                            console.log("This is the Current URL: " + url);
                             url = url + "&recording_delete=no"
                             window.location.href = url;
-                            console.log("This is URL : " + url)
                         } else {
                             e.preventDefault();
                             let url = element.closest('a').href;
-                            console.log("This is the Current URL: " + url);
                             url = url + "&recording_delete=yes"
                             window.location.href = url;
-                            console.log("This is URL : " + url);
-
                         };
                     });
                 });
             });
         </script>
-<?php
+    <?php
     }
 }
 add_action('admin_footer', 'add_delete_confirmation');
+
+
+function meethour_display_error_message_meeting()
+{
+    $error_message = get_transient('meethour_error_message');
+    if ($error_message) {
+    ?>
+        <div class="notice notice-error">
+            <p><?php echo esc_html($error_message); ?></p>
+        </div>
+<?php
+        delete_transient('meethour_error_message');
+    }
+}
+add_action('admin_notices', 'meethour_display_error_message_meeting');

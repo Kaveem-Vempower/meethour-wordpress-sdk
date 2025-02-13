@@ -7,7 +7,6 @@ require(WP_PLUGIN_DIR . '/meethour/vendor/meethour/php-sdk/src/autoload.php');
 while (have_posts()) : the_post();
 
     $video_url = get_post_meta(get_the_ID(), 'recording_path', true);
-    error_log('This is the video url :' . $video_url);
 ?>
     <!DOCTYPE html>
     <html lang="en">

@@ -12,7 +12,6 @@ function wordpress_fetch_users()
 {
     $members = get_users(
         array(
-            'role'    => 'meethour',
             'orderby' => 'ID',
             'order'   => 'ASC'
         )
@@ -32,20 +31,20 @@ function wordpress_fetch_users()
 
 function meethour_fetch_users()
 {
-    settings_errors('meethour_Guests');
 
     $meetHourApiService = new MHApiService();
     $access_token = get_option('meethour_access_token', '');
 
     if (empty($access_token)) {
-        return new WP_Error('no_token', 'Access token not found');
+        return set_transient('meethour_error_message', "Access Code not Generated", 30);
     }
 
     $body = new ContactsList();
     $response = $meetHourApiService->ContactsList($access_token, $body);
 
     if ($response->success == false) {
-        add_settings_error('meethour_Guests', 'meethour_success', esc_html($response->message), 'error');
+        set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
+        return;
     }
 
     $data = $response->contacts;
@@ -70,7 +69,6 @@ function meethour_fetch_users()
         }
     }
 
-    // Your logic to fetch the users
 
     if (!empty($data)) {
         wp_send_json_success($data);
@@ -123,7 +121,7 @@ function add_fetch_contacts_button()
                 console.log('Fetch contacts button clicked');
 
                 jQuery.ajax({
-                    url: ajaxurl, // WordPress built-in AJAX URL
+                    url: ajaxurl,
                     type: "POST",
                     data: {
                         action: 'meethour_fetch_contacts'
@@ -155,10 +153,6 @@ function add_fetch_contacts_button()
 }
 // }
 add_action('wp_ajax_meethour_fetch_contacts', 'meethour_fetch_users');
-function function_alert($message)
-{
-    echo "<script>alert('$message');</script>";
-}
 
 $access_token = get_option('meethour_access_token', '');
 if (!empty($access_token)) {
@@ -187,12 +181,12 @@ function meethour_delete_user_form($user, $userids)
                     <td style="padding-top: 5px;">
                         <label for="delete_meethour">
                             <input type="checkbox" name="delete_meethour" id="delete_meethour" value="yes" />
-                            <?php esc_html_e('I Agree to delete these users from the Meet Hour database.'); ?>
+                            <?php esc_html_e('I Agree to delete these users from the Meet Hour Portal as well.'); ?>
                         </label>
                     </td>
                 </tr>
             </table>
-<?php
+        <?php
         }
     }
 }
@@ -208,14 +202,11 @@ function delete_meethour_user($user_id)
         $meetHourApiService = new MHApiService();
         $access_token = get_option('meethour_access_token', '');
         $meethour_user_id = get_user_meta($user_id, 'meethour_user_id', true);
-        function_alert("Deleting Meethour Post");
         if (!empty($meethour_user_id)) {
             $body = new DeleteContact($meethour_user_id);
             $response = $meetHourApiService->deleteContact($access_token, $body);
             if ($response->success == false) {
-                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
-            } else {
-                add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'success');
+                set_transient('meethour_error_message', $response->message, 30);
             }
         }
     }
@@ -225,7 +216,6 @@ function delete_meethour_user($user_id)
 function create_user_in_my_app($user_id)
 {
     settings_errors('meethour_messages');
-    error_log('create_user_in_my_app called' . $user_id);
     $meetHourApiService = new MHApiService();
     $user = get_userdata($user_id);
     $token = get_option('meethour_access_token', '');
@@ -240,7 +230,8 @@ function create_user_in_my_app($user_id)
     $body = new AddContact($email, $first_name, $last_name, $username);
     $response = $meetHourApiService->AddContact($token, $body);
     if ($response->success == false) {
-        add_settings_error('meethour_messages', 'meethour_success', esc_html($response->message), 'error');
+        set_transient('meethour_error_message', $response->message, 30); // store the error message for 30 seconds
+        return;
     } else {
         $data = $response->data;
         $meta_value = $data->id;
@@ -250,3 +241,16 @@ function create_user_in_my_app($user_id)
 }
 
 add_action('user_register', 'create_user_in_my_app', 10, 1);
+function meethour_display_error_message_guests()
+{
+    $error_message = get_transient('meethour_error_message');
+    if ($error_message) {
+        ?>
+        <div class="notice notice-error">
+            <p><?php echo esc_html($error_message); ?></p>
+        </div>
+<?php
+        delete_transient('meethour_error_message'); // delete the transient
+    }
+}
+add_action('admin_notices', 'meethour_display_error_message_guests');
